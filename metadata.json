@@ -1,0 +1,6 @@
+{
+  "name": "Conch Predictor Series",
+  "description": "The ultimate NFL futures predictor pool. Create groups, make predictions on awards, divisions, and standings, and track your friends on the leaderboard.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,358 @@
+import React, { useState, useEffect } from "react";
+import { ArrowLeft, Award, Users, Save, Sparkles, Settings, Copy, Check, Share2, RefreshCw, Search } from "lucide-react";
+import { Pool, Picks } from "../types";
+import { doc, getDoc, onSnapshot } from "firebase/firestore";
+import { db } from "../lib/firebase";
+import StandingsTab from "./StandingsTab";
+import PicksTab from "./PicksTab";
+import ComparePicksTab from "./ComparePicksTab";
+import AdminTab from "./AdminTab";
+import RosterScoutTab from "./RosterScoutTab";
+import { fetchNflStandings, TeamStandingInfo } from "../lib/nflApi";
+
+interface PoolDetailProps {
+  pool: Pool;
+  user: any;
+  onBack: () => void;
+}
+
+type TabType = "standings" | "my_picks" | "compare" | "admin" | "roster_scout";
+
+export default function PoolDetail({ pool: initialPool, user, onBack }: PoolDetailProps) {
+  const [pool, setPool] = useState<Pool>(initialPool);
+  const [userPicks, setUserPicks] = useState<Picks | null>(null);
+  const [loadingPicks, setLoadingPicks] = useState(true);
+  const [activeTab, setActiveTab] = useState<TabType>("standings");
+  const [copied, setCopied] = useState(false);
+  const [shareCopied, setShareCopied] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  
+  // Real-time NFL Standings from ESPN
+  const [nflStandings, setNflStandings] = useState<Record<string, TeamStandingInfo> | null>(null);
+  const [loadingStandings, setLoadingStandings] = useState(false);
+
+  // Subscribe to real-time pool document updates to capture results updates instantly
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, "pools", initialPool.id), (docSnap) => {
+      if (docSnap.exists()) {
+        setPool({ id: docSnap.id, ...docSnap.data() } as Pool);
+      }
+    });
+    return () => unsub();
+  }, [initialPool.id]);
+
+  // Fetch the current NFL team records from ESPN
+  const loadStandingsData = async () => {
+    setLoadingStandings(true);
+    try {
+      const data = await fetchNflStandings();
+      setNflStandings(data);
+    } catch (err) {
+      console.warn("Failed to retrieve live NFL standings:", err);
+    } finally {
+      setLoadingStandings(false);
+    }
+  };
+
+  useEffect(() => {
+    loadStandingsData();
+  }, []);
+
+  // Fetch the current user's submitted picks inside this pool
+  const fetchUserPicks = async () => {
+    setLoadingPicks(true);
+    try {
+      const pickDocRef = doc(db, `pools/${initialPool.id}/picks`, user.uid);
+      const pickDocSnap = await getDoc(pickDocRef);
+      if (pickDocSnap.exists()) {
+        setUserPicks({ id: pickDocSnap.id, ...pickDocSnap.data() } as any);
+      } else {
+        setUserPicks(null);
+      }
+    } catch (err) {
+      console.error("Failed to load user picks", err);
+    } finally {
+      setLoadingPicks(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchUserPicks();
+  }, [pool.id, user.uid]);
+
+  const copyToClipboard = async (text: string): Promise<boolean> => {
+    // Try modern asynchronous clipboard API first
+    if (navigator.clipboard) {
+      try {
+        await navigator.clipboard.writeText(text);
+        return true;
+      } catch (err) {
+        console.warn("navigator.clipboard.writeText failed, trying selection fallback:", err);
+      }
+    }
+
+    // Classic selection fallback (highly reliable in iframes or document focus issues)
+    try {
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+      textArea.style.position = "fixed";
+      textArea.style.top = "0";
+      textArea.style.left = "0";
+      textArea.style.width = "2em";
+      textArea.style.height = "2em";
+      textArea.style.padding = "0";
+      textArea.style.border = "none";
+      textArea.style.outline = "none";
+      textArea.style.boxShadow = "none";
+      textArea.style.background = "transparent";
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      const successful = document.execCommand("copy");
+      document.body.removeChild(textArea);
+      return successful;
+    } catch (err) {
+      console.error("Selection-based clipboard fallback failed:", err);
+      return false;
+    }
+  };
+
+  const handleCopyCode = async () => {
+    const success = await copyToClipboard(pool.code);
+    if (success) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const handleSharePool = async () => {
+    const shareUrl = `${window.location.origin}?join=${pool.code}`;
+    
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `Join my NFL Futures Pool: ${pool.name}`,
+          text: `Join my Conch Predictor NFL Futures Pick'Em pool "${pool.name}" using the passcode ${pool.code}!`,
+          url: shareUrl,
+        });
+        return;
+      } catch (err) {
+        // If share was cancelled or failed, fall back to copy
+        console.log("Share API error or cancelled, falling back to copy", err);
+      }
+    }
+    
+    // Fallback: Robust Clipboard copy
+    const success = await copyToClipboard(shareUrl);
+    if (success) {
+      setShareCopied(true);
+      setTimeout(() => setShareCopied(false), 2000);
+    } else {
+      console.error("Failed to copy link using all methods");
+    }
+  };
+
+  const isCreator = pool.creatorId === user.uid;
+
+  return (
+    <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6">
+      {/* Pool Header / Banner */}
+      <div className="bg-slate-800 border border-slate-700/60 rounded-2xl p-5 sm:p-6 shadow-lg mb-8">
+        <button
+          onClick={onBack}
+          className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-colors mb-4 cursor-pointer"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" /> Back to My Pools
+        </button>
+
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-5">
+          <div>
+            <h1 className="text-2xl font-extrabold text-white">{pool.name}</h1>
+            {pool.description && (
+              <p className="text-slate-400 text-sm mt-1 max-w-xl leading-relaxed">
+                {pool.description}
+              </p>
+            )}
+            <p className="text-[11px] text-slate-500 font-mono mt-2">
+              Created by {pool.creatorName}
+            </p>
+          </div>
+
+          {/* Code and Invite panel */}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4 bg-slate-900 border border-slate-700/40 p-4 rounded-xl shadow-inner w-full lg:w-auto">
+            <div className="flex items-center justify-between sm:justify-start gap-4">
+              <div>
+                <span className="block text-[9px] uppercase font-bold tracking-wider text-slate-500">
+                  Friends Join Code
+                </span>
+                <span className="text-sm font-mono font-black text-emerald-400 tracking-wider">
+                  {pool.code}
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <button
+                onClick={handleCopyCode}
+                className="flex-1 sm:flex-none px-3 py-2 bg-slate-800 hover:bg-slate-755 text-slate-300 hover:text-white rounded-lg border border-slate-700/60 transition-all flex items-center justify-center gap-1.5 cursor-pointer text-xs font-semibold min-w-[110px]"
+                title="Copy Code"
+              >
+                {copied ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 text-emerald-400" />
+                    <span className="text-[10px] font-bold text-emerald-400">Copied Code!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3.5 h-3.5" />
+                    <span>Copy Code</span>
+                  </>
+                )}
+              </button>
+              
+              <button
+                onClick={handleSharePool}
+                className="flex-1 sm:flex-none px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-black rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer text-xs min-w-[110px] shadow-sm shadow-emerald-500/10"
+                title="Share Pool Invite Link"
+              >
+                {shareCopied ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 text-slate-950" />
+                    <span className="text-[10px] font-black">Link Copied!</span>
+                  </>
+                ) : (
+                  <>
+                    <Share2 className="w-3.5 h-3.5" />
+                    <span>Share Pool</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Tabs navigation */}
+      <div className="flex border-b border-slate-800 gap-1 sm:gap-2 mb-6 overflow-x-auto pb-1 scrollbar-none">
+        <button
+          onClick={() => setActiveTab("standings")}
+          className={`px-4 py-2.5 rounded-t-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer ${
+            activeTab === "standings"
+              ? "bg-slate-800 text-emerald-400 border-b-2 border-emerald-500"
+              : "text-slate-400 hover:text-slate-200"
+          }`}
+        >
+          <Award className="w-4 h-4" /> Standings
+        </button>
+
+        <button
+          onClick={() => setActiveTab("my_picks")}
+          className={`px-4 py-2.5 rounded-t-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer ${
+            activeTab === "my_picks"
+              ? "bg-slate-800 text-emerald-400 border-b-2 border-emerald-500"
+              : "text-slate-400 hover:text-slate-200"
+          }`}
+        >
+          <Save className="w-4 h-4" /> My Picks
+        </button>
+
+        <button
+          onClick={() => setActiveTab("compare")}
+          className={`px-4 py-2.5 rounded-t-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer ${
+            activeTab === "compare"
+              ? "bg-slate-800 text-emerald-400 border-b-2 border-emerald-500"
+              : "text-slate-400 hover:text-slate-200"
+          }`}
+        >
+          <Users className="w-4 h-4" /> Compare Picks
+        </button>
+
+        <button
+          onClick={() => setActiveTab("roster_scout")}
+          className={`px-4 py-2.5 rounded-t-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer ${
+            activeTab === "roster_scout"
+              ? "bg-slate-800 text-teal-400 border-b-2 border-teal-500"
+              : "text-slate-400 hover:text-slate-200"
+          }`}
+        >
+          <Search className="w-4 h-4" /> Player Scout
+        </button>
+
+        {isCreator && (
+          <button
+            onClick={() => setActiveTab("admin")}
+            className={`px-4 py-2.5 rounded-t-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer ${
+              activeTab === "admin"
+                ? "bg-slate-800 text-amber-400 border-b-2 border-amber-500"
+                : "text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            <Settings className="w-4 h-4" /> Admin Controls
+          </button>
+        )}
+      </div>
+
+      {/* Category Filter Selector */}
+      <div id="category-filter-bar" className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-slate-900 border border-slate-800 p-4 rounded-2xl mb-6 shadow-inner">
+        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider font-mono flex items-center gap-1.5">
+          <Sparkles className="w-3.5 h-3.5 text-emerald-400" /> Filter Futures:
+        </span>
+        <div className="flex flex-wrap gap-1.5 w-full sm:w-auto">
+          {[
+            { id: "all", label: "All Categories" },
+            { id: "award", label: "MVP & Awards" },
+            { id: "division", label: "Division Winners" },
+            { id: "over_under", label: "Over/Unders" },
+            { id: "standings", label: "Standings Predictions" },
+          ].map((cat) => (
+            <button
+              key={cat.id}
+              onClick={() => setCategoryFilter(cat.id)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all duration-150 cursor-pointer ${
+                categoryFilter === cat.id
+                  ? "bg-emerald-500/15 border-emerald-500/35 text-emerald-400"
+                  : "bg-slate-800/50 hover:bg-slate-800 border-transparent text-slate-400 hover:text-slate-200"
+              }`}
+            >
+              {cat.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Tabs panels render */}
+      <div className="bg-slate-900 border border-slate-800/80 rounded-2xl p-4 sm:p-6 min-h-[50vh] shadow-inner">
+        {activeTab === "standings" && (
+          <StandingsTab pool={pool} user={user} userPicks={userPicks} categoryFilter={categoryFilter} nflStandings={nflStandings || undefined} />
+        )}
+
+        {activeTab === "my_picks" && (
+          loadingPicks ? (
+            <div className="text-center py-12 text-slate-400">Loading your selections...</div>
+          ) : (
+            <PicksTab
+              pool={pool}
+              user={user}
+              userPicks={userPicks}
+              onPicksSaved={(newPicks) => setUserPicks(newPicks)}
+              categoryFilter={categoryFilter}
+              nflStandings={nflStandings || undefined}
+            />
+          )
+        )}
+
+        {activeTab === "compare" && <ComparePicksTab pool={pool} categoryFilter={categoryFilter} nflStandings={nflStandings || undefined} />}
+
+        {activeTab === "roster_scout" && <RosterScoutTab />}
+
+        {activeTab === "admin" && isCreator && (
+          <AdminTab
+            pool={pool}
+            onPoolUpdated={(updatedPool) => setPool(updatedPool)}
+            categoryFilter={categoryFilter}
+            nflStandings={nflStandings || undefined}
+          />
+        )}
+      </div>
+    </div>
+  );
+}

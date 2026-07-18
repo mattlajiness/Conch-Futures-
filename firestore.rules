@@ -1,0 +1,90 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // 1. Global Safety Net - Default-deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Common Helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Validation Helpers
+    function isValidPool(pool) {
+      return pool.keys().hasAll(['id', 'name', 'code', 'creatorId', 'creatorName', 'createdAt'])
+             && pool.id is string && pool.id.size() <= 128
+             && pool.name is string && pool.name.size() <= 100
+             && pool.code is string && pool.code.size() <= 20
+             && pool.creatorId is string && pool.creatorId.size() <= 128
+             && pool.creatorName is string && pool.creatorName.size() <= 100
+             && (!pool.keys().hasAny(['description']) || (pool.description is string && pool.description.size() <= 500))
+             && (!pool.keys().hasAny(['results']) || pool.results is map)
+             && (!pool.keys().hasAny(['activeQuestions']) || pool.activeQuestions is list);
+    }
+
+    function isValidPicks(picks) {
+      return picks.keys().hasAll(['userId', 'userDisplayName', 'selections', 'updatedAt'])
+             && picks.userId is string && picks.userId.size() <= 128
+             && picks.userDisplayName is string && picks.userDisplayName.size() <= 100
+             && picks.selections is map
+             && (!picks.keys().hasAny(['userPhotoURL']) || (picks.userPhotoURL is string && picks.userPhotoURL.size() <= 1000));
+    }
+
+    // Pools Collection Rules
+    match /pools/{poolId} {
+      
+      allow read: if isSignedIn();
+      
+      allow create: if isSignedIn()
+                    && isValidId(poolId)
+                    && request.resource.data.id == poolId
+                    && isValidPool(request.resource.data)
+                    && request.resource.data.creatorId == request.auth.uid
+                    && request.resource.data.createdAt == request.time;
+
+      allow update: if isValidPool(request.resource.data)
+                    && isSignedIn()
+                    && request.auth.uid == resource.data.creatorId
+                    && request.resource.data.creatorId == resource.data.creatorId
+                    && request.resource.data.createdAt == resource.data.createdAt
+                    && (
+                      request.resource.data.diff(resource.data).affectedKeys().hasOnly(['results', 'activeQuestions', 'name', 'description', 'code'])
+                    );
+
+      allow delete: if isSignedIn()
+                    && request.auth.uid == resource.data.creatorId;
+
+      // Picks Subcollection Rules
+      match /picks/{userId} {
+        
+        allow read: if isSignedIn();
+
+        allow create: if isSignedIn()
+                      && userId == request.auth.uid
+                      && isValidId(userId)
+                      && isValidPicks(request.resource.data)
+                      && request.resource.data.userId == request.auth.uid
+                      && request.resource.data.updatedAt == request.time
+                      && exists(/databases/$(database)/documents/pools/$(poolId));
+
+        allow update: if isValidPicks(request.resource.data)
+                      && isSignedIn()
+                      && userId == request.auth.uid
+                      && request.auth.uid == resource.data.userId
+                      && request.resource.data.userId == resource.data.userId
+                      && request.resource.data.updatedAt == request.time
+                      && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['selections', 'userDisplayName', 'userPhotoURL', 'updatedAt']);
+
+        allow delete: if isSignedIn()
+                      && userId == request.auth.uid;
+      }
+    }
+  }
+}

@@ -1,0 +1,89 @@
+{
+  "entities": {
+    "pool": {
+      "title": "Pool",
+      "description": "An NFL futures pick em pool created by a user.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "The unique ID of the pool."
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "The name of the pool."
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "A description of the pool."
+        },
+        "code": {
+          "type": "string",
+          "maxLength": 20,
+          "description": "The code required to join the pool."
+        },
+        "creatorId": {
+          "type": "string",
+          "description": "The UID of the user who created the pool."
+        },
+        "creatorName": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "The display name of the creator."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the pool was created."
+        },
+        "results": {
+          "type": "object",
+          "description": "The official results set by the pool creator/admin for grading."
+        }
+      },
+      "required": ["id", "name", "code", "creatorId", "createdAt"]
+    },
+    "picks": {
+      "title": "Picks",
+      "description": "The NFL futures picks submitted by a member of a pool.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "The UID of the picker."
+        },
+        "userDisplayName": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "The display name of the picker."
+        },
+        "userPhotoURL": {
+          "type": "string",
+          "description": "The photo URL of the picker."
+        },
+        "selections": {
+          "type": "object",
+          "description": "Map of futures category IDs to selections."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the picks were last updated."
+        }
+      },
+      "required": ["userId", "userDisplayName", "selections", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/pools/{poolId}": {
+      "schema": "pool",
+      "description": "NFL Futures pools collection."
+    },
+    "/pools/{poolId}/picks/{userId}": {
+      "schema": "picks",
+      "description": "User picks subcollection within a pool."
+    }
+  }
+}
