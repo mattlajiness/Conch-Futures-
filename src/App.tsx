@@ -66,7 +66,7 @@ export default function App() {
               Conch Predictor Series
             </h1>
             <p className="text-teal-200/60 text-sm leading-relaxed mb-8">
-              Predict division crowns, MVPs, win totals, and the next Super Bowl champion. Challenge your friends in full Pick &apos;Em pools!
+              Rub the magic conch and compete against your friends to see who can predict NFL futures the best! Choose division winners, major awards, super bowl champions, and over/under win totals. Create a pool, invite friends with a code, and track standings as the season unfolds.
             </p>
 
             <button

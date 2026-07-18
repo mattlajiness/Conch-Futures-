@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { ArrowLeft, Award, Users, Save, Sparkles, Settings, Copy, Check, Share2, RefreshCw, Search } from "lucide-react";
+import { ArrowLeft, Award, Users, Save, Sparkles, Settings, Copy, Check, Share2, RefreshCw, Search, History } from "lucide-react";
 import { Pool, Picks } from "../types";
 import { doc, getDoc, onSnapshot } from "firebase/firestore";
 import { db } from "../lib/firebase";
@@ -7,7 +7,7 @@ import StandingsTab from "./StandingsTab";
 import PicksTab from "./PicksTab";
 import ComparePicksTab from "./ComparePicksTab";
 import AdminTab from "./AdminTab";
-import RosterScoutTab from "./RosterScoutTab";
+import LastYearResultsTab from "./LastYearResultsTab";
 import { fetchNflStandings, TeamStandingInfo } from "../lib/nflApi";
 
 interface PoolDetailProps {
@@ -16,7 +16,7 @@ interface PoolDetailProps {
   onBack: () => void;
 }
 
-type TabType = "standings" | "my_picks" | "compare" | "admin" | "roster_scout";
+type TabType = "standings" | "my_picks" | "compare" | "admin" | "last_year";
 
 export default function PoolDetail({ pool: initialPool, user, onBack }: PoolDetailProps) {
   const [pool, setPool] = useState<Pool>(initialPool);
@@ -126,7 +126,7 @@ export default function PoolDetail({ pool: initialPool, user, onBack }: PoolDeta
   };
 
   const handleSharePool = async () => {
-    const shareUrl = `${window.location.origin}?join=${pool.code}`;
+    const shareUrl = `${window.location.origin}${window.location.pathname}?join=${pool.code}`;
     
     if (navigator.share) {
       try {
@@ -267,14 +267,14 @@ export default function PoolDetail({ pool: initialPool, user, onBack }: PoolDeta
         </button>
 
         <button
-          onClick={() => setActiveTab("roster_scout")}
+          onClick={() => setActiveTab("last_year")}
           className={`px-4 py-2.5 rounded-t-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer ${
-            activeTab === "roster_scout"
-              ? "bg-slate-800 text-teal-400 border-b-2 border-teal-500"
+            activeTab === "last_year"
+              ? "bg-slate-800 text-indigo-400 border-b-2 border-indigo-500"
               : "text-slate-400 hover:text-slate-200"
           }`}
         >
-          <Search className="w-4 h-4" /> Player Scout
+          <History className="w-4 h-4" /> Last Year
         </button>
 
         {isCreator && (
@@ -342,7 +342,7 @@ export default function PoolDetail({ pool: initialPool, user, onBack }: PoolDeta
 
         {activeTab === "compare" && <ComparePicksTab pool={pool} categoryFilter={categoryFilter} nflStandings={nflStandings || undefined} />}
 
-        {activeTab === "roster_scout" && <RosterScoutTab />}
+        {activeTab === "last_year" && <LastYearResultsTab />}
 
         {activeTab === "admin" && isCreator && (
           <AdminTab

@@ -259,14 +259,11 @@ export default function PoolSelector({ user, onSelectPool }: PoolSelectorProps) 
           <Logo size={240} variant="full" />
         </div>
         <div className="max-w-2xl relative z-10">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold text-teal-400 bg-teal-500/10 border border-teal-500/20 rounded-full mb-4">
-            <Sparkles className="w-3.5 h-3.5" /> NFL Futures Pools
-          </span>
           <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white mb-3">
             Conch Predictor Series
           </h1>
           <p className="text-slate-300 text-sm sm:text-base leading-relaxed">
-            Predict the upcoming season! Choose division winners, major awards, super bowl champions, and over/under win totals. Create a pool, invite friends with a code, and track standings as the season unfolds.
+            Rub the magic conch and compete against your friends to see who can predict NFL futures the best! Choose division winners, major awards, super bowl champions, and over/under win totals. Create a pool, invite friends with a code, and track standings as the season unfolds.
           </p>
         </div>
       </div>

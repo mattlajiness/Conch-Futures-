@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { FUTURES_QUESTIONS } from "../constants";
+import { FUTURES_QUESTIONS, NFL_TEAMS_ALL } from "../constants";
 import { Save, Check, Award, Compass, ShieldAlert, Zap, ListOrdered } from "lucide-react";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { db, OperationType, handleFirestoreError } from "../lib/firebase";
@@ -217,7 +217,15 @@ export default function PicksTab({ pool, user, userPicks, onPicksSaved, category
                   <label className="block text-[10px] uppercase font-semibold tracking-wider text-slate-500">
                     Your Selection
                   </label>
-                  <select
+                  
+                  <div className="flex items-center gap-3">
+                    {currentSelection && NFL_TEAMS_ALL.some(t => t.value === currentSelection) && (
+                      <div className="shrink-0 bg-slate-900 rounded border border-slate-700/50 p-1 flex items-center justify-center">
+                        <img src={`https://a.espncdn.com/i/teamlogos/nfl/500/${currentSelection.toLowerCase()}.png`} alt={currentSelection} className="w-6 h-6 object-contain" referrerPolicy="no-referrer" />
+                      </div>
+                    )}
+                    <div className="flex-1">
+                      <select
                     value={currentSelection || ""}
                     onChange={(e) => handleSelectOption(q.id, e.target.value)}
                     className="w-full bg-slate-900 border border-slate-700/80 rounded-lg px-3.5 py-2.5 text-white text-sm focus:outline-none focus:border-emerald-500 transition-colors font-medium cursor-pointer"
@@ -235,6 +243,9 @@ export default function PicksTab({ pool, user, userPicks, onPicksSaved, category
                       );
                     })}
                   </select>
+                    </div>
+                  </div>
+
                 </div>
 
                 {currentSelection && (
@@ -281,24 +292,33 @@ export default function PicksTab({ pool, user, userPicks, onPicksSaved, category
                 </div>
 
                 <div className="space-y-2 mt-auto">
-                  <select
-                    value={currentSelection || ""}
-                    onChange={(e) => handleSelectOption(q.id, e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-700/80 rounded-lg px-2 py-2 text-white text-xs focus:outline-none focus:border-emerald-500 transition-colors cursor-pointer"
-                  >
-                    <option value="" disabled className="text-slate-600">
-                      -- Choose Team --
-                    </option>
-                    {q.options.map((opt) => {
-                      const standing = nflStandings?.[opt.value];
-                      const label = standing ? `${opt.label} (${standing.overallRecord})` : opt.label;
-                      return (
-                        <option key={opt.value} value={opt.value} className="text-white bg-slate-900">
-                          {label}
+                  <div className="flex items-center gap-2">
+                    {currentSelection && NFL_TEAMS_ALL.some(t => t.value === currentSelection) && (
+                      <div className="shrink-0 bg-slate-900 rounded border border-slate-700/50 p-1 flex items-center justify-center">
+                        <img src={`https://a.espncdn.com/i/teamlogos/nfl/500/${currentSelection.toLowerCase()}.png`} alt={currentSelection} className="w-5 h-5 object-contain" referrerPolicy="no-referrer" />
+                      </div>
+                    )}
+                    <div className="flex-1">
+                      <select
+                        value={currentSelection || ""}
+                        onChange={(e) => handleSelectOption(q.id, e.target.value)}
+                        className="w-full bg-slate-900 border border-slate-700/80 rounded-lg px-2 py-2 text-white text-xs focus:outline-none focus:border-emerald-500 transition-colors cursor-pointer"
+                      >
+                        <option value="" disabled className="text-slate-600">
+                          -- Choose Team --
                         </option>
-                      );
-                    })}
-                  </select>
+                        {q.options.map((opt) => {
+                          const standing = nflStandings?.[opt.value];
+                          const label = standing ? `${opt.label} (${standing.overallRecord})` : opt.label;
+                          return (
+                            <option key={opt.value} value={opt.value} className="text-white bg-slate-900">
+                              {label}
+                            </option>
+                          );
+                        })}
+                      </select>
+                    </div>
+                  </div>
                 </div>
               </div>
             );
@@ -362,23 +382,28 @@ export default function PicksTab({ pool, user, userPicks, onPicksSaved, category
                         <span className={`w-32 text-[10px] font-extrabold uppercase tracking-wider ${slot.color}`}>
                           {slot.label}
                         </span>
-                        <select
-                          value={selectedValue}
-                          onChange={(e) => handleSelectStandingSlot(q.id, index, e.target.value)}
-                          className="flex-1 bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer font-semibold"
-                        >
-                          <option value="">-- Select Team --</option>
-                          {q.options.map((opt) => {
-                            const isSelectedElsewhere = currentOrder.some((t, i) => i !== index && t === opt.value);
-                            const standing = nflStandings?.[opt.value];
-                            const label = standing ? `${opt.label} (${standing.overallRecord})` : opt.label;
-                            return (
-                              <option key={opt.value} value={opt.value}>
-                                {label} {isSelectedElsewhere ? "(Swaps)" : ""}
-                              </option>
-                            );
-                          })}
-                        </select>
+                        <div className="flex-1 flex items-center gap-2">
+                            {selectedValue && NFL_TEAMS_ALL.some(t => t.value === selectedValue) && (
+                              <img src={`https://a.espncdn.com/i/teamlogos/nfl/500/${selectedValue.toLowerCase()}.png`} alt={selectedValue} className="w-4 h-4 object-contain" referrerPolicy="no-referrer" />
+                            )}
+                            <select
+                              value={selectedValue}
+                              onChange={(e) => handleSelectStandingSlot(q.id, index, e.target.value)}
+                              className="flex-1 bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer font-semibold min-w-0"
+                            >
+                              <option value="">-- Select Team --</option>
+                              {q.options.map((opt) => {
+                                const isSelectedElsewhere = currentOrder.some((t, i) => i !== index && t === opt.value);
+                                const standing = nflStandings?.[opt.value];
+                                const label = standing ? `${opt.label} (${standing.overallRecord})` : opt.label;
+                                return (
+                                  <option key={opt.value} value={opt.value} disabled={isSelectedElsewhere} className={isSelectedElsewhere ? "text-slate-600" : "text-white"}>
+                                    {label}
+                                  </option>
+                                );
+                              })}
+                            </select>
+                          </div>
                       </div>
                     );
                   })}
@@ -412,59 +437,68 @@ export default function PicksTab({ pool, user, userPicks, onPicksSaved, category
           </h2>
         </div>
 
-        <div className="bg-slate-800/80 border border-slate-700/50 rounded-xl overflow-hidden shadow-sm">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 divide-y md:divide-y-0 md:border-b border-slate-700/50 last:border-0 [&>*:not(:last-child)]:border-b md:[&>*:not(:last-child)]:border-b-0 md:[&>*:not(:nth-child(3n))]:border-r">
-            {ouQuestions.map((q) => {
-              const currentSelection = selections[q.id];
-              const teamCode = q.id.replace("ou_", "").toUpperCase();
-              const teamStanding = nflStandings?.[teamCode];
-              const line = q.title.split("-")[1]?.trim().split(" ")[0] || "8.5";
-              const teamName = q.title.split("-")[0]?.trim() || q.title;
-              return (
-                <div
-                  key={q.id}
-                  className="p-3 hover:bg-slate-800/40 transition-colors flex justify-between items-center gap-3"
-                >
-                  <div className="flex flex-col">
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-bold text-white text-xs">{teamName}</h3>
-                      {teamStanding && (
-                        <span className="text-[9px] font-mono text-teal-400 bg-teal-500/10 px-1.5 py-0.5 rounded">
-                          {teamStanding.overallRecord}
-                        </span>
-                      )}
-                    </div>
-                    <span className="text-[10px] text-slate-400 mt-0.5">
-                      Line: <span className="font-semibold text-slate-300">{line} Wins</span>
-                    </span>
-                  </div>
-                  <div className="flex bg-slate-900 rounded-lg p-0.5 border border-slate-700 shrink-0">
-                    {q.options.map((opt) => {
-                      const isSelected = currentSelection === opt.value;
-                      return (
-                        <button
-                          key={opt.value}
-                          onClick={() => handleSelectOption(q.id, opt.value)}
-                          className={`px-3 py-1.5 rounded-md text-[10px] font-bold transition-all duration-150 cursor-pointer ${
-                            isSelected
-                              ? "bg-emerald-600 text-white shadow"
-                              : "text-slate-400 hover:text-slate-200 hover:bg-slate-800"
-                          }`}
-                        >
-                          {opt.value}
-                        </button>
-                      );
-                    })}
-                  </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {["AFC East", "AFC North", "AFC South", "AFC West", "NFC East", "NFC North", "NFC South", "NFC West"].map((division) => {
+            const divisionTeams = NFL_TEAMS_ALL.filter(t => t.division === division);
+            const divisionQuestions = divisionTeams.map(t => ouQuestions.find(q => q.id === `ou_${t.value.toLowerCase()}`)).filter(Boolean) as typeof ouQuestions;
+            
+            if (divisionQuestions.length === 0) return null;
+
+            return (
+              <div key={division} className="bg-slate-800/80 border border-slate-700/50 rounded-xl overflow-hidden shadow-sm flex flex-col">
+                <div className="bg-slate-900/60 px-3 py-2 border-b border-slate-700/50 text-center">
+                  <h3 className="font-bold text-slate-300 text-xs uppercase tracking-wider">{division}</h3>
                 </div>
-              );
-            })}
-          </div>
+                <div className="flex flex-col divide-y divide-slate-700/50">
+                  {divisionQuestions.map((q) => {
+                    const currentSelection = selections[q.id];
+                    const teamCode = q.id.replace("ou_", "").toUpperCase();
+                    const teamStanding = nflStandings?.[teamCode];
+                    const line = q.title.split("-")[1]?.trim().split(" ")[0] || "8.5";
+                    const teamName = q.title.split("-")[0]?.trim() || q.title;
+                    return (
+                      <div
+                        key={q.id}
+                        className="p-3 flex flex-col gap-2 hover:bg-slate-800/40 transition-colors"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <img src={`https://a.espncdn.com/i/teamlogos/nfl/500/${teamCode.toLowerCase()}.png`} alt={teamName} className="w-5 h-5 object-contain" referrerPolicy="no-referrer" />
+                            <h3 className="font-bold text-white text-xs">{teamName}</h3>
+                          </div>
+                          <span className="text-[10px] font-semibold text-slate-300 bg-slate-900/80 px-1.5 py-0.5 rounded border border-slate-700">
+                            {line}
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-1.5">
+                          {q.options.map((opt) => {
+                            const isSelected = currentSelection === opt.value;
+                            return (
+                              <button
+                                key={opt.value}
+                                onClick={() => handleSelectOption(q.id, opt.value)}
+                                className={`py-1.5 rounded-md text-[10px] font-bold transition-all duration-150 cursor-pointer text-center ${
+                                  isSelected
+                                    ? "bg-emerald-600 text-white shadow"
+                                    : "bg-slate-900 border border-slate-700 text-slate-400 hover:text-slate-200 hover:bg-slate-800"
+                                }`}
+                              >
+                                {opt.value}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
       )}
-
-{/* Sticky footer Save helper */}
+      {/* Sticky footer Save helper */}
       <div className="bg-slate-800/60 rounded-xl border border-slate-700/40 p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-slate-400 text-xs">
         <p>Make sure to press &quot;Lock In Picks&quot; above to submit or update your answers securely.</p>
         <button
