@@ -649,56 +649,6 @@ export default function AdminTab({ pool, onPoolUpdated, categoryFilter = "all", 
             </div>
           )}
 
-          {/* Over / Under Category */}
-          {(categoryFilter === "all" || categoryFilter === "over_under") && ouQuestions.some(q => activeQuestions.includes(q.id)) && (
-            <div className="space-y-4 pt-4">
-              <h3 className="text-sm font-extrabold uppercase tracking-widest text-amber-400 flex items-center gap-2 pb-1 border-b border-slate-800">
-                <ShieldAlert className="w-4 h-4" /> Over/Under Win Totals
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                {ouQuestions.filter(q => activeQuestions.includes(q.id)).map((q) => {
-                  const currentWinner = results[q.id];
-                  return (
-                    <div key={q.id} className="bg-slate-800/80 border border-slate-700/50 rounded-xl p-4 flex flex-col justify-between gap-4">
-                      <div>
-                        <h4 className="font-bold text-white text-sm">{q.title}</h4>
-                        <p className="text-slate-400 text-[10px] mt-0.5">{q.subtitle}</p>
-                      </div>
-                      <div className="grid grid-cols-3 gap-2">
-                        <button
-                          onClick={() => handleSelectWinner(q.id, "OVER")}
-                          className={`py-1.5 px-2 rounded-lg text-xs font-bold border transition-all cursor-pointer ${
-                            currentWinner === "OVER"
-                              ? "bg-amber-600 border-amber-400 text-white shadow"
-                              : "bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-850"
-                          }`}
-                        >
-                          OVER
-                        </button>
-                        <button
-                          onClick={() => handleSelectWinner(q.id, "UNDER")}
-                          className={`py-1.5 px-2 rounded-lg text-xs font-bold border transition-all cursor-pointer ${
-                            currentWinner === "UNDER"
-                              ? "bg-amber-600 border-amber-400 text-white shadow"
-                              : "bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-850"
-                          }`}
-                        >
-                          UNDER
-                        </button>
-                        <button
-                          onClick={() => handleClearWinner(q.id)}
-                          className="py-1.5 px-2 rounded-lg text-xs font-medium border border-rose-500/20 bg-rose-500/10 text-rose-400 cursor-pointer text-center hover:bg-rose-500/25 transition-colors"
-                        >
-                          Clear
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
           {/* Division Standings Category */}
           {(categoryFilter === "all" || categoryFilter === "standings") && standingsQuestions.some(q => activeQuestions.includes(q.id)) && (
             <div className="space-y-4 pt-4">
@@ -772,6 +722,68 @@ export default function AdminTab({ pool, onPoolUpdated, categoryFilter = "all", 
                     </div>
                   );
                 })}
+              </div>
+            </div>
+          )}
+
+          {/* Over / Under Category */}
+          {(categoryFilter === "all" || categoryFilter === "over_under") && ouQuestions.some(q => activeQuestions.includes(q.id)) && (
+            <div className="space-y-4 pt-4">
+              <h3 className="text-sm font-extrabold uppercase tracking-widest text-amber-400 flex items-center gap-2 pb-1 border-b border-slate-800">
+                <ShieldAlert className="w-4 h-4" /> Over/Under Win Totals
+              </h3>
+              <div className="bg-slate-800/80 border border-slate-700/50 rounded-xl overflow-hidden shadow-sm">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 divide-y md:divide-y-0 md:border-b border-slate-700/50 last:border-0 [&>*:not(:last-child)]:border-b md:[&>*:not(:last-child)]:border-b-0 md:[&>*:not(:nth-child(3n))]:border-r">
+                {ouQuestions.filter(q => activeQuestions.includes(q.id)).map((q) => {
+                  const currentWinner = results[q.id];
+                  const line = q.title.split("-")[1]?.trim().split(" ")[0] || "8.5";
+                  const teamName = q.title.split("-")[0]?.trim() || q.title;
+                  return (
+                    <div
+                      key={q.id}
+                      className="p-3 hover:bg-slate-800/40 transition-colors flex flex-col xl:flex-row xl:justify-between xl:items-center gap-3"
+                    >
+                      <div className="flex flex-col">
+                        <h4 className="font-bold text-white text-xs">{teamName}</h4>
+                        <span className="text-[10px] text-slate-400 mt-0.5">
+                          Line: <span className="font-semibold text-slate-300">{line} Wins</span>
+                        </span>
+                      </div>
+                      <div className="flex bg-slate-900 rounded-lg p-0.5 border border-slate-700 shrink-0 self-start xl:self-auto">
+                        <button
+                          onClick={() => handleSelectWinner(q.id, "OVER")}
+                          className={`px-3 py-1.5 rounded-md text-[10px] font-bold transition-all duration-150 cursor-pointer ${
+                            currentWinner === "OVER"
+                              ? "bg-amber-600 text-white shadow"
+                              : "text-slate-400 hover:text-slate-200 hover:bg-slate-800"
+                          }`}
+                        >
+                          OVER
+                        </button>
+                        <button
+                          onClick={() => handleSelectWinner(q.id, "UNDER")}
+                          className={`px-3 py-1.5 rounded-md text-[10px] font-bold transition-all duration-150 cursor-pointer ${
+                            currentWinner === "UNDER"
+                              ? "bg-amber-600 text-white shadow"
+                              : "text-slate-400 hover:text-slate-200 hover:bg-slate-800"
+                          }`}
+                        >
+                          UNDER
+                        </button>
+                        <button
+                          onClick={() => handleClearWinner(q.id)}
+                          disabled={!currentWinner}
+                          className={`px-2 py-1.5 ml-1 rounded-md text-[10px] font-bold transition-all duration-150 cursor-pointer ${
+                            currentWinner ? "text-rose-400 hover:bg-rose-500/20" : "text-slate-600 cursor-default opacity-50"
+                          }`}
+                        >
+                          CLR
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
               </div>
             </div>
           )}

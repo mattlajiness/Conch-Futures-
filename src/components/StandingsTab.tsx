@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "../lib/firebase";
-import { FUTURES_QUESTIONS } from "../constants";
+import { FUTURES_QUESTIONS, NFL_WIN_TOTALS } from "../constants";
 import { Pool, Picks, StandingRow } from "../types";
 import { Medal, Check, X, ShieldAlert, Award, AlertCircle, RefreshCw, Crown, TrendingUp, Users } from "lucide-react";
 import { TeamStandingInfo } from "../lib/nflApi";
@@ -53,7 +53,34 @@ export default function StandingsTab({ pool, user, userPicks, categoryFilter = "
 
         activeQuestionsList.forEach((q) => {
           const userPick = pick.selections[q.id];
-          const officialWinner = results[q.id];
+          let officialWinner = results[q.id];
+
+          // DYNAMIC SCORING: If no official winner, calculate it from live NFL standings
+          if (!officialWinner && nflStandings && Object.keys(nflStandings).length > 0) {
+            if (q.category === "division") {
+              const leadingTeam = q.options.find(opt => nflStandings[opt.value]?.divisionStanding === 1);
+              if (leadingTeam) officialWinner = leadingTeam.value;
+            } else if (q.category === "standings") {
+              const sorted = [...q.options].sort((a, b) => {
+                const sA = nflStandings[a.value]?.divisionStanding || 99;
+                const sB = nflStandings[b.value]?.divisionStanding || 99;
+                return sA - sB;
+              });
+              officialWinner = sorted.map(t => t.value).join(",");
+            } else if (q.category === "over_under") {
+              const teamValue = q.id.split('_')[1]?.toUpperCase();
+              if (teamValue && nflStandings[teamValue]) {
+                const stats = nflStandings[teamValue];
+                const totalGames = stats.wins + stats.losses + stats.ties;
+                if (totalGames > 0) {
+                  const pace = (stats.wins / totalGames) * 17;
+                  const line = NFL_WIN_TOTALS[teamValue] || 8.5;
+                  if (pace > line) officialWinner = "OVER";
+                  else if (pace < line) officialWinner = "UNDER";
+                }
+              }
+            }
+          }
 
           if (userPick && officialWinner) {
             if (q.category === "standings") {
@@ -126,9 +153,7 @@ export default function StandingsTab({ pool, user, userPicks, categoryFilter = "
               <Award className="w-5 h-5 text-emerald-400" /> Leaderboard
             </h2>
             <p className="text-slate-400 text-xs mt-1">
-              {officialResultsCount === 0
-                ? "Picks submitted. Waiting for official results to compile score."
-                : `Grades compiled from ${officialResultsCount} official results.`}
+              Scores are dynamically calculated using real-time NFL standings{officialResultsCount > 0 ? `, supplemented by ${officialResultsCount} manual admin results.` : "."}
             </p>
           </div>
           <button
@@ -329,7 +354,34 @@ export default function StandingsTab({ pool, user, userPicks, categoryFilter = "
             <div className="space-y-3.5 animate-fadeIn">
               {activeQuestionsList.filter((q) => categoryFilter === "all" || q.category === categoryFilter).map((q) => {
                 const userPick = selectedUser.picks[q.id];
-                const officialWinner = pool.results?.[q.id];
+                let officialWinner = pool.results?.[q.id];
+                let isDynamic = false;
+                if (!officialWinner && nflStandings && Object.keys(nflStandings).length > 0) {
+                  isDynamic = true;
+                  if (q.category === "division") {
+                    const leadingTeam = q.options.find(opt => nflStandings[opt.value]?.divisionStanding === 1);
+                    if (leadingTeam) officialWinner = leadingTeam.value;
+                  } else if (q.category === "standings") {
+                    const sorted = [...q.options].sort((a, b) => {
+                      const sA = nflStandings[a.value]?.divisionStanding || 99;
+                      const sB = nflStandings[b.value]?.divisionStanding || 99;
+                      return sA - sB;
+                    });
+                    officialWinner = sorted.map(t => t.value).join(",");
+                  } else if (q.category === "over_under") {
+                    const teamValue = q.id.split('_')[1]?.toUpperCase();
+                    if (teamValue && nflStandings[teamValue]) {
+                      const stats = nflStandings[teamValue];
+                      const totalGames = stats.wins + stats.losses + stats.ties;
+                      if (totalGames > 0) {
+                        const pace = (stats.wins / totalGames) * 17;
+                        const line = NFL_WIN_TOTALS[teamValue] || 8.5;
+                        if (pace > line) officialWinner = "OVER";
+                        else if (pace < line) officialWinner = "UNDER";
+                      }
+                    }
+                  }
+                }
                 
                 let isCorrect = false;
                 let pickLabel = "";
@@ -358,7 +410,11 @@ export default function StandingsTab({ pool, user, userPicks, categoryFilter = "
                 } else {
                   isCorrect = userPick && officialWinner && userPick === officialWinner;
                   const baseLabel = q.options.find((o) => o.value === userPick)?.label || "No pick";
-                  const std = nflStandings?.[userPick];
+                  let std = nflStandings?.[userPick];
+                  if (q.category === "over_under") {
+                    const teamValue = q.id.split('_')[1]?.toUpperCase();
+                    std = nflStandings?.[teamValue];
+                  }
                   pickLabel = std ? `${baseLabel} (${std.overallRecord})` : baseLabel;
                   if (officialWinner) {
                     scoreText = isCorrect ? `Correct (+${q.points} pts)` : `Incorrect (+0 pts)`;
@@ -416,7 +472,7 @@ export default function StandingsTab({ pool, user, userPicks, categoryFilter = "
 
                     {officialWinner && !isCorrect && (
                       <div className="text-[10px] text-slate-400 bg-slate-950/40 rounded px-2 py-1 mt-1 border-l-2 border-amber-500">
-                        Official: <span className="font-semibold text-slate-200">
+                        {isDynamic ? "Projected" : "Official"}: <span className="font-semibold text-slate-200">
                           {q.category === "standings"
                             ? officialWinner.split(",").map(t => q.options.find(o => o.value === t)?.label.split(" ").pop() || t).join(" > ")
                             : (q.options.find((o) => o.value === officialWinner)?.label || officialWinner)}

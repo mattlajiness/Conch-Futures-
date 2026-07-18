@@ -127,6 +127,19 @@ export default function PicksTab({ pool, user, userPicks, onPicksSaved, category
 
   return (
     <div className="space-y-8">
+      {/* Information Banner */}
+      <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-xl p-4 flex items-start gap-3">
+        <div className="p-1.5 bg-indigo-500/20 rounded-lg shrink-0">
+          <ListOrdered className="w-4 h-4 text-indigo-400" />
+        </div>
+        <div>
+          <h3 className="text-sm font-bold text-indigo-300">Live Scoring Active</h3>
+          <p className="text-xs text-indigo-200/70 mt-1 leading-relaxed">
+            Your picks will be automatically graded and updated on the leaderboard using real-time NFL standings as the season progresses. Admin results are only required for manual overrides and official end-of-season awards.
+          </p>
+        </div>
+      </div>
+
       {/* Save Action / Status Floating or Top bar */}
       <div className="bg-slate-800 border border-slate-700/60 rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row justify-between items-center gap-4 shadow-lg sticky top-4 z-20">
         <div className="w-full sm:w-auto">
@@ -294,72 +307,6 @@ export default function PicksTab({ pool, user, userPicks, onPicksSaved, category
       </div>
       )}
 
-      {/* 3. SECTION: OVER / UNDER WIN TOTALS */}
-      {(categoryFilter === "all" || categoryFilter === "over_under") && (
-      <div>
-        <div className="flex items-center gap-3 border-b border-slate-700/50 pb-3 mb-6 mt-10">
-          <span className="p-1.5 bg-emerald-500/10 rounded border border-emerald-500/20">
-            <ShieldAlert className="w-5 h-5 text-emerald-400" />
-          </span>
-          <h2 className="text-lg font-extrabold text-white uppercase tracking-wider">
-            Win Total Over/Unders
-          </h2>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {ouQuestions.map((q) => {
-            const currentSelection = selections[q.id];
-            const teamCode = q.id.replace("ou_", "").toUpperCase();
-            const teamStanding = nflStandings?.[teamCode];
-
-            return (
-              <div
-                key={q.id}
-                className="bg-slate-800/80 border border-slate-700/50 hover:border-slate-700 rounded-xl p-4 shadow-sm flex flex-col justify-between space-y-4"
-              >
-                <div>
-                  <div className="flex justify-between items-start gap-2">
-                    <h3 className="font-bold text-white text-sm">{q.title}</h3>
-                    <span className="text-[10px] font-mono font-semibold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded">
-                      +5 PTS
-                    </span>
-                  </div>
-                  <p className="text-slate-400 text-[11px] mt-1 leading-normal">{q.subtitle}</p>
-                  
-                  {teamStanding && (
-                    <div className="mt-2.5 px-2 py-1.5 bg-slate-900/50 rounded-lg border border-slate-700/30 flex justify-between items-center text-[9px] font-mono">
-                      <span className="text-slate-500 uppercase font-bold">Record:</span>
-                      <span className="text-teal-400 font-extrabold">{teamStanding.overallRecord} ({teamStanding.wins} wins)</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Over/Under buttons side by side */}
-                <div className="grid grid-cols-2 gap-2.5">
-                  {q.options.map((opt) => {
-                    const isSelected = currentSelection === opt.value;
-                    return (
-                      <button
-                        key={opt.value}
-                        onClick={() => handleSelectOption(q.id, opt.value)}
-                        className={`py-2 px-3 rounded-lg text-xs font-bold border transition-all duration-150 cursor-pointer text-center ${
-                          isSelected
-                            ? "bg-emerald-600 border-emerald-400 text-white shadow-md shadow-emerald-500/10"
-                            : "bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800"
-                        }`}
-                      >
-                        {opt.value}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-      )}
-
       {/* 4. SECTION: DIVISION STANDINGS ORDER */}
       {(categoryFilter === "all" || categoryFilter === "standings") && standingsQuestions.length > 0 && (
       <div>
@@ -453,7 +400,71 @@ export default function PicksTab({ pool, user, userPicks, onPicksSaved, category
       </div>
       )}
 
-      {/* Sticky footer Save helper */}
+      {/* 3. SECTION: OVER / UNDER WIN TOTALS */}
+      {(categoryFilter === "all" || categoryFilter === "over_under") && (
+      <div>
+        <div className="flex items-center gap-3 border-b border-slate-700/50 pb-3 mb-6 mt-10">
+          <span className="p-1.5 bg-emerald-500/10 rounded border border-emerald-500/20">
+            <ShieldAlert className="w-5 h-5 text-emerald-400" />
+          </span>
+          <h2 className="text-lg font-extrabold text-white uppercase tracking-wider">
+            Win Total Over/Unders
+          </h2>
+        </div>
+
+        <div className="bg-slate-800/80 border border-slate-700/50 rounded-xl overflow-hidden shadow-sm">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 divide-y md:divide-y-0 md:border-b border-slate-700/50 last:border-0 [&>*:not(:last-child)]:border-b md:[&>*:not(:last-child)]:border-b-0 md:[&>*:not(:nth-child(3n))]:border-r">
+            {ouQuestions.map((q) => {
+              const currentSelection = selections[q.id];
+              const teamCode = q.id.replace("ou_", "").toUpperCase();
+              const teamStanding = nflStandings?.[teamCode];
+              const line = q.title.split("-")[1]?.trim().split(" ")[0] || "8.5";
+              const teamName = q.title.split("-")[0]?.trim() || q.title;
+              return (
+                <div
+                  key={q.id}
+                  className="p-3 hover:bg-slate-800/40 transition-colors flex justify-between items-center gap-3"
+                >
+                  <div className="flex flex-col">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-bold text-white text-xs">{teamName}</h3>
+                      {teamStanding && (
+                        <span className="text-[9px] font-mono text-teal-400 bg-teal-500/10 px-1.5 py-0.5 rounded">
+                          {teamStanding.overallRecord}
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-[10px] text-slate-400 mt-0.5">
+                      Line: <span className="font-semibold text-slate-300">{line} Wins</span>
+                    </span>
+                  </div>
+                  <div className="flex bg-slate-900 rounded-lg p-0.5 border border-slate-700 shrink-0">
+                    {q.options.map((opt) => {
+                      const isSelected = currentSelection === opt.value;
+                      return (
+                        <button
+                          key={opt.value}
+                          onClick={() => handleSelectOption(q.id, opt.value)}
+                          className={`px-3 py-1.5 rounded-md text-[10px] font-bold transition-all duration-150 cursor-pointer ${
+                            isSelected
+                              ? "bg-emerald-600 text-white shadow"
+                              : "text-slate-400 hover:text-slate-200 hover:bg-slate-800"
+                          }`}
+                        >
+                          {opt.value}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+      )}
+
+{/* Sticky footer Save helper */}
       <div className="bg-slate-800/60 rounded-xl border border-slate-700/40 p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-slate-400 text-xs">
         <p>Make sure to press &quot;Lock In Picks&quot; above to submit or update your answers securely.</p>
         <button
