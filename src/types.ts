@@ -8,6 +8,7 @@ export interface Pool {
   createdAt: any; // Timestamp or date string
   results?: Record<string, string>; // Map of categoryId -> officialWinner
   activeQuestions?: string[]; // Optional active question IDs for this pool
+  customPoints?: Record<string, number>; // Optional custom points mapping
 }
 
 export interface Picks {

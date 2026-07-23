@@ -55,17 +55,17 @@ export default function App() {
         <div className="absolute inset-0 bg-[linear-gradient(rgba(16,165,185,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(16,165,185,0.02)_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none"></div>
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-teal-500/5 blur-[120px] rounded-full pointer-events-none"></div>
 
-        <div className="flex-grow flex items-center justify-center p-6 relative z-10">
+        <div className="flex-grow flex items-center justify-center p-3 relative z-10">
           <div className="max-w-md w-full bg-[#09222c] border border-[#113a4b]/80 rounded-3xl p-8 text-center shadow-2xl relative">
             {/* Logo ornament */}
-            <div className="flex justify-center mb-6">
+            <div className="flex justify-center mb-3">
               <Logo size={84} variant="full" />
             </div>
 
             <h1 className="text-3xl font-extrabold tracking-tight text-white mb-2 font-display">
               Conch Predictor Series
             </h1>
-            <p className="text-teal-200/60 text-sm leading-relaxed mb-8">
+            <p className="text-teal-200/60 text-sm leading-relaxed mb-4">
               Rub the magic conch and compete against your friends to see who can predict NFL futures the best! Choose division winners, major awards, super bowl champions, and over/under win totals. Create a pool, invite friends with a code, and track standings as the season unfolds.
             </p>
 
@@ -95,7 +95,7 @@ export default function App() {
               <span>Continue with Google</span>
             </button>
 
-            <div className="mt-8 pt-6 border-t border-[#144458]/40 flex justify-center gap-6 text-[10px] uppercase font-mono tracking-wider text-teal-500/80">
+            <div className="mt-8 pt-6 border-t border-[#144458]/40 flex justify-center gap-3 text-[10px] uppercase font-mono tracking-wider text-teal-500/80">
               <span className="flex items-center gap-1">
                 <Shield className="w-3.5 h-3.5 text-teal-400/80" /> Secure Rules
               </span>
@@ -107,7 +107,7 @@ export default function App() {
         </div>
 
         {/* Humble and minimalist football card footer */}
-        <footer className="text-center py-6 text-teal-800 text-xs font-mono">
+        <footer className="text-center py-2 text-teal-800 text-xs font-mono">
           Conch Predictor Series • UTC 2026
         </footer>
       </div>
@@ -119,7 +119,7 @@ export default function App() {
     <div className="min-h-screen bg-[#061217] flex flex-col">
       {/* Navbar dashboard */}
       <header className="border-b border-[#113a4b]/50 bg-[#071d26]/80 backdrop-blur-md sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-2 sm:px-6 h-12 flex items-center justify-between">
           <div
             onClick={() => setSelectedPool(null)}
             className="flex items-center gap-2 cursor-pointer group"
@@ -163,7 +163,7 @@ export default function App() {
       </header>
 
       {/* Main Workspace container */}
-      <main className="flex-grow pb-16">
+      <main className="flex-grow pb-4">
         {selectedPool ? (
           <PoolDetail
             pool={selectedPool}
@@ -179,7 +179,7 @@ export default function App() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-[#113a4b]/40 bg-[#041014]/40 text-center py-6 text-teal-800 text-xs font-mono">
+      <footer className="border-t border-[#113a4b]/40 bg-[#041014]/40 text-center py-2 text-teal-800 text-xs font-mono">
         Conch Predictor Series • Predictions & Standings
       </footer>
     </div>

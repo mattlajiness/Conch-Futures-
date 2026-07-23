@@ -155,17 +155,17 @@ export default function PoolDetail({ pool: initialPool, user, onBack }: PoolDeta
   const isCreator = pool.creatorId === user.uid;
 
   return (
-    <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6">
+    <div className="max-w-7xl mx-auto py-1 px-2 sm:px-2">
       {/* Pool Header / Banner */}
-      <div className="bg-slate-800 border border-slate-700/60 rounded-2xl p-5 sm:p-6 shadow-lg mb-8">
+      <div className="bg-slate-800 border border-slate-700/60 rounded-xl p-2 shadow-lg mb-2">
         <button
           onClick={onBack}
-          className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-colors mb-4 cursor-pointer"
+          className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-colors mb-2 cursor-pointer"
         >
           <ArrowLeft className="w-3.5 h-3.5" /> Back to My Pools
         </button>
 
-        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-5">
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-2.5">
           <div>
             <h1 className="text-2xl font-extrabold text-white">{pool.name}</h1>
             {pool.description && (
@@ -179,8 +179,8 @@ export default function PoolDetail({ pool: initialPool, user, onBack }: PoolDeta
           </div>
 
           {/* Code and Invite panel */}
-          <div className="flex flex-col sm:flex-row sm:items-center gap-4 bg-slate-900 border border-slate-700/40 p-4 rounded-xl shadow-inner w-full lg:w-auto">
-            <div className="flex items-center justify-between sm:justify-start gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 bg-slate-900 border border-slate-700/40 p-2 rounded-xl shadow-inner w-full lg:w-auto">
+            <div className="flex items-center justify-between sm:justify-start gap-2">
               <div>
                 <span className="block text-[9px] uppercase font-bold tracking-wider text-slate-500">
                   Friends Join Code
@@ -193,7 +193,7 @@ export default function PoolDetail({ pool: initialPool, user, onBack }: PoolDeta
             <div className="flex items-center gap-2 w-full sm:w-auto">
               <button
                 onClick={handleCopyCode}
-                className="flex-1 sm:flex-none px-3 py-2 bg-slate-800 hover:bg-slate-755 text-slate-300 hover:text-white rounded-lg border border-slate-700/60 transition-all flex items-center justify-center gap-1.5 cursor-pointer text-xs font-semibold min-w-[110px]"
+                className="flex-1 sm:flex-none px-1.5 py-1 bg-slate-800 hover:bg-slate-755 text-slate-300 hover:text-white rounded-lg border border-slate-700/60 transition-all flex items-center justify-center gap-1.5 cursor-pointer text-xs font-semibold min-w-[110px]"
                 title="Copy Code"
               >
                 {copied ? (
@@ -211,7 +211,7 @@ export default function PoolDetail({ pool: initialPool, user, onBack }: PoolDeta
               
               <button
                 onClick={handleSharePool}
-                className="flex-1 sm:flex-none px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-black rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer text-xs min-w-[110px] shadow-sm shadow-emerald-500/10"
+                className="flex-1 sm:flex-none px-1.5.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-black rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer text-xs min-w-[110px] shadow-sm shadow-emerald-500/10"
                 title="Share Pool Invite Link"
               >
                 {shareCopied ? (
@@ -232,10 +232,10 @@ export default function PoolDetail({ pool: initialPool, user, onBack }: PoolDeta
       </div>
 
       {/* Tabs navigation */}
-      <div className="flex border-b border-slate-800 gap-1 sm:gap-2 mb-6 overflow-x-auto pb-1 scrollbar-none">
+      <div className="flex border-b border-slate-800 gap-1 sm:gap-2 mb-3 overflow-x-auto pb-1 scrollbar-none">
         <button
           onClick={() => setActiveTab("standings")}
-          className={`px-4 py-2.5 rounded-t-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer ${
+          className={`px-2 py-1.5 rounded-t-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer ${
             activeTab === "standings"
               ? "bg-slate-800 text-emerald-400 border-b-2 border-emerald-500"
               : "text-slate-400 hover:text-slate-200"
@@ -246,7 +246,7 @@ export default function PoolDetail({ pool: initialPool, user, onBack }: PoolDeta
 
         <button
           onClick={() => setActiveTab("my_picks")}
-          className={`px-4 py-2.5 rounded-t-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer ${
+          className={`px-2 py-1.5 rounded-t-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer ${
             activeTab === "my_picks"
               ? "bg-slate-800 text-emerald-400 border-b-2 border-emerald-500"
               : "text-slate-400 hover:text-slate-200"
@@ -257,7 +257,7 @@ export default function PoolDetail({ pool: initialPool, user, onBack }: PoolDeta
 
         <button
           onClick={() => setActiveTab("compare")}
-          className={`px-4 py-2.5 rounded-t-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer ${
+          className={`px-2 py-1.5 rounded-t-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer ${
             activeTab === "compare"
               ? "bg-slate-800 text-emerald-400 border-b-2 border-emerald-500"
               : "text-slate-400 hover:text-slate-200"
@@ -268,7 +268,7 @@ export default function PoolDetail({ pool: initialPool, user, onBack }: PoolDeta
 
         <button
           onClick={() => setActiveTab("last_year")}
-          className={`px-4 py-2.5 rounded-t-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer ${
+          className={`px-2 py-1.5 rounded-t-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer ${
             activeTab === "last_year"
               ? "bg-slate-800 text-indigo-400 border-b-2 border-indigo-500"
               : "text-slate-400 hover:text-slate-200"
@@ -280,7 +280,7 @@ export default function PoolDetail({ pool: initialPool, user, onBack }: PoolDeta
         {isCreator && (
           <button
             onClick={() => setActiveTab("admin")}
-            className={`px-4 py-2.5 rounded-t-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer ${
+            className={`px-2 py-1.5 rounded-t-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer ${
               activeTab === "admin"
                 ? "bg-slate-800 text-amber-400 border-b-2 border-amber-500"
                 : "text-slate-400 hover:text-slate-200"
@@ -292,7 +292,7 @@ export default function PoolDetail({ pool: initialPool, user, onBack }: PoolDeta
       </div>
 
       {/* Category Filter Selector */}
-      <div id="category-filter-bar" className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-slate-900 border border-slate-800 p-4 rounded-2xl mb-6 shadow-inner">
+      <div id="category-filter-bar" className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 bg-slate-900 border border-slate-800 p-3 rounded-xl mb-2 shadow-inner">
         <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider font-mono flex items-center gap-1.5">
           <Sparkles className="w-3.5 h-3.5 text-emerald-400" /> Filter Futures:
         </span>
@@ -306,7 +306,7 @@ export default function PoolDetail({ pool: initialPool, user, onBack }: PoolDeta
             <button
               key={cat.id}
               onClick={() => setCategoryFilter(cat.id)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all duration-150 cursor-pointer ${
+              className={`px-1.5 py-1.5 rounded-lg text-xs font-bold border transition-all duration-150 cursor-pointer ${
                 categoryFilter === cat.id
                   ? "bg-emerald-500/15 border-emerald-500/35 text-emerald-400"
                   : "bg-slate-800/50 hover:bg-slate-800 border-transparent text-slate-400 hover:text-slate-200"
@@ -319,7 +319,7 @@ export default function PoolDetail({ pool: initialPool, user, onBack }: PoolDeta
       </div>
 
       {/* Tabs panels render */}
-      <div className="bg-slate-900 border border-slate-800/80 rounded-2xl p-4 sm:p-6 min-h-[50vh] shadow-inner">
+      <div className="bg-slate-900 border border-slate-800/80 rounded-xl p-3 sm:p-2 min-h-[50vh] shadow-inner">
         {activeTab === "standings" && (
           <StandingsTab pool={pool} user={user} userPicks={userPicks} categoryFilter={categoryFilter} nflStandings={nflStandings || undefined} />
         )}

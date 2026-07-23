@@ -18,6 +18,10 @@ export default function ComparePicksTab({ pool, categoryFilter = "all", nflStand
   const [error, setError] = useState<string | null>(null);
   const [selectedQuestionId, setSelectedQuestionId] = useState<string>("");
 
+  const getPoints = (qId: string, defaultPoints: number) => {
+    return pool.customPoints?.[qId] !== undefined ? pool.customPoints[qId] : defaultPoints;
+  };
+
   const activeQuestionsList = FUTURES_QUESTIONS.filter(
     (q) => !pool.activeQuestions || pool.activeQuestions.includes(q.id)
   );
@@ -114,10 +118,10 @@ export default function ComparePicksTab({ pool, categoryFilter = "all", nflStand
   const officialWinner = pool.results?.[selectedQuestion.id];
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-2 items-start">
       {/* Question Selector list (Left 1 column) */}
-      <div className="space-y-4">
-        <div className="flex justify-between items-center pb-2 border-b border-slate-800">
+      <div className="space-y-2">
+        <div className="flex justify-between items-center pb-1 border-b border-slate-800">
           <h2 className="text-base font-bold text-white flex items-center gap-2">
             <Award className="w-4 h-4 text-emerald-400" /> Choose Future
           </h2>
@@ -155,7 +159,7 @@ export default function ComparePicksTab({ pool, categoryFilter = "all", nflStand
                   )}
                 </div>
                 <div className="flex justify-between items-center mt-1.5 text-[10px] text-slate-500 font-mono">
-                  <span>+{q.points} PTS</span>
+                  <span>+{getPoints(q.id, q.points)} PTS</span>
                   <span>{answersCount} predictions</span>
                 </div>
               </div>
@@ -165,19 +169,19 @@ export default function ComparePicksTab({ pool, categoryFilter = "all", nflStand
       </div>
 
       {/* Comparisons and Breakdown (Right 2 columns) */}
-      <div className="lg:col-span-2 space-y-6">
+      <div className="lg:col-span-2 space-y-2">
         {loading ? (
-          <div className="bg-slate-800/40 border border-slate-700/50 rounded-2xl p-8 text-center animate-pulse">
+          <div className="bg-slate-800/40 border border-slate-700/50 rounded-2xl p-3 text-center animate-pulse">
             Loading comparative insights...
           </div>
         ) : error ? (
-          <div className="bg-rose-500/10 border border-rose-500/20 rounded-2xl p-6 text-rose-300 text-sm">
+          <div className="bg-rose-500/10 border border-rose-500/20 rounded-2xl p-3 text-rose-300 text-sm">
             {error}
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-2">
             {/* Header info of chosen question */}
-            <div className="bg-slate-800 border border-slate-700/60 rounded-2xl p-5 shadow-sm">
+            <div className="bg-slate-800 border border-slate-700/60 rounded-2xl p-3 shadow-sm">
               <span className="text-[10px] uppercase font-mono tracking-wider text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/25">
                 {selectedQuestion.category.replace("_", " ")}
               </span>
@@ -185,7 +189,7 @@ export default function ComparePicksTab({ pool, categoryFilter = "all", nflStand
               <p className="text-slate-400 text-xs mt-1 leading-relaxed">{selectedQuestion.subtitle}</p>
 
               {officialWinner && (
-                <div className="mt-4 px-4 py-2.5 bg-emerald-500/10 border border-emerald-500/25 rounded-xl text-emerald-400 text-xs flex items-center gap-2.5 animate-fadeIn">
+                <div className="mt-4 px-2.5 py-1.5 bg-emerald-500/10 border border-emerald-500/25 rounded-xl text-emerald-400 text-xs flex items-center gap-2.5 animate-fadeIn">
                   <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
                   <span>
                     Official Outcome:{" "}
@@ -200,8 +204,8 @@ export default function ComparePicksTab({ pool, categoryFilter = "all", nflStand
             </div>
 
             {/* Statistics Chart breakdown */}
-            <div className="bg-slate-800 border border-slate-700/60 rounded-2xl p-5 shadow-sm space-y-4">
-              <h4 className="text-sm font-bold text-white flex items-center gap-2 pb-2 border-b border-slate-700/50">
+            <div className="bg-slate-800 border border-slate-700/60 rounded-2xl p-3 shadow-sm space-y-2">
+              <h4 className="text-sm font-bold text-white flex items-center gap-2 pb-1 border-b border-slate-700/50">
                 <PieChart className="w-4 h-4 text-emerald-400" /> Consensus & Picks Breakdown
               </h4>
 
@@ -253,12 +257,12 @@ export default function ComparePicksTab({ pool, categoryFilter = "all", nflStand
             </div>
 
             {/* Complete Grid List comparison */}
-            <div className="bg-slate-800 border border-slate-700/60 rounded-2xl p-5 shadow-sm space-y-4">
-              <h4 className="text-sm font-bold text-white flex items-center gap-2 pb-2 border-b border-slate-700/50">
+            <div className="bg-slate-800 border border-slate-700/60 rounded-2xl p-3 shadow-sm space-y-2">
+              <h4 className="text-sm font-bold text-white flex items-center gap-2 pb-1 border-b border-slate-700/50">
                 <Users className="w-4 h-4 text-emerald-400" /> Individual Predictions List
               </h4>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {allPicks.map((pick) => {
                   const userChoice = pick.selections[selectedQuestion.id];
                   
@@ -316,7 +320,7 @@ export default function ComparePicksTab({ pool, categoryFilter = "all", nflStand
                     >
                       <div className="min-w-0 flex-1 pr-2">
                         <span className="text-xs font-bold text-slate-300 block truncate">{pick.userDisplayName}</span>
-                        <span className={`text-[11px] font-semibold block truncate ${userChoice ? "text-white" : "text-slate-600 italic"}`}>
+                        <span className={`text-[11px] font-semibold block ${userChoice ? "text-white" : "text-slate-600 italic"}`}>
                           {label}
                         </span>
                       </div>

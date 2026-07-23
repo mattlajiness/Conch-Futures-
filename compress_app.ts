@@ -1,0 +1,23 @@
+import * as fs from 'fs';
+let content = fs.readFileSync('src/App.tsx', 'utf-8');
+content = content.replace(/pb-16/g, 'pb-4');
+content = content.replace(/pb-8/g, 'pb-4');
+content = content.replace(/py-6/g, 'py-2');
+content = content.replace(/px-4/g, 'px-2');
+content = content.replace(/h-16/g, 'h-12');
+content = content.replace(/mb-8/g, 'mb-4');
+content = content.replace(/mb-6/g, 'mb-3');
+content = content.replace(/p-6/g, 'p-3');
+fs.writeFileSync('src/App.tsx', content);
+
+let poolSel = fs.readFileSync('src/components/PoolSelector.tsx', 'utf-8');
+poolSel = poolSel.replace(/py-8/g, 'py-3');
+poolSel = poolSel.replace(/py-4/g, 'py-2');
+poolSel = poolSel.replace(/p-8/g, 'p-4');
+poolSel = poolSel.replace(/p-6/g, 'p-3');
+poolSel = poolSel.replace(/mb-10/g, 'mb-4');
+poolSel = poolSel.replace(/mb-8/g, 'mb-3');
+poolSel = poolSel.replace(/gap-6/g, 'gap-3');
+poolSel = poolSel.replace(/gap-4/g, 'gap-2');
+fs.writeFileSync('src/components/PoolSelector.tsx', poolSel);
+console.log("Compressed App and PoolSelector");

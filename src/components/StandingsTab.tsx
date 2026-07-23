@@ -20,6 +20,10 @@ export default function StandingsTab({ pool, user, userPicks, categoryFilter = "
   const [error, setError] = useState<string | null>(null);
   const [selectedUser, setSelectedUser] = useState<StandingRow | null>(null);
 
+  const getPoints = (qId: string, defaultPoints: number) => {
+    return pool.customPoints?.[qId] !== undefined ? pool.customPoints[qId] : defaultPoints;
+  };
+
   // Filter questions by active list configured in this pool
   const activeQuestionsList = FUTURES_QUESTIONS.filter(
     (q) => !pool.activeQuestions || pool.activeQuestions.includes(q.id)
@@ -93,11 +97,14 @@ export default function StandingsTab({ pool, user, userPicks, categoryFilter = "
                 }
               }
               if (matches > 0) {
-                score += matches * (q.points / 4);
+                score += matches * (getPoints(q.id, q.points) / 4);
+                if (matches === 4) {
+                  score += 10; // Bonus for exact order
+                }
                 correctCount += matches / 4;
               }
             } else if (userPick === officialWinner) {
-              score += q.points;
+              score += getPoints(q.id, q.points);
               correctCount += 1;
             }
           }
@@ -144,10 +151,10 @@ export default function StandingsTab({ pool, user, userPicks, categoryFilter = "
   const officialResultsCount = Object.keys(pool.results || {}).length;
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-2.5 items-start">
       {/* Standings List (Left 2 columns) */}
-      <div className="lg:col-span-2 space-y-4">
-        <div className="flex justify-between items-center pb-2 border-b border-slate-800">
+      <div className="lg:col-span-2 space-y-2">
+        <div className="flex justify-between items-center pb-1 border-b border-slate-800">
           <div>
             <h2 className="text-xl font-bold text-white flex items-center gap-2">
               <Award className="w-5 h-5 text-emerald-400" /> Leaderboard
@@ -171,7 +178,7 @@ export default function StandingsTab({ pool, user, userPicks, categoryFilter = "
             ))}
           </div>
         ) : error ? (
-          <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl p-4 text-rose-300 text-sm flex items-start gap-2">
+          <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl p-2.5 text-rose-300 text-sm flex items-start gap-2">
             <AlertCircle className="w-5 h-5 flex-shrink-0" />
             <span>{error}</span>
           </div>
@@ -180,13 +187,13 @@ export default function StandingsTab({ pool, user, userPicks, categoryFilter = "
             No entries submitted picks yet. Be the first!
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-3">
             {/* KPI metrics cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
               {/* Leader Card */}
               <div
                 id="leaderboard-kpi-leader-card"
-                className="bg-slate-850 border border-slate-800/80 rounded-xl p-4 flex items-center gap-3.5"
+                className="bg-slate-850 border border-slate-800/80 rounded-xl p-2.5 flex items-center gap-2.5.5"
               >
                 <div className="w-10 h-10 rounded-lg bg-amber-500/10 border border-amber-500/25 flex items-center justify-center flex-shrink-0">
                   <Crown className="w-5 h-5 text-amber-400" />
@@ -207,7 +214,7 @@ export default function StandingsTab({ pool, user, userPicks, categoryFilter = "
               {/* Average Score Card */}
               <div
                 id="leaderboard-kpi-avg-score-card"
-                className="bg-slate-850 border border-slate-800/80 rounded-xl p-4 flex items-center gap-3.5"
+                className="bg-slate-850 border border-slate-800/80 rounded-xl p-2.5 flex items-center gap-2.5.5"
               >
                 <div className="w-10 h-10 rounded-lg bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center flex-shrink-0">
                   <TrendingUp className="w-5 h-5 text-emerald-400" />
@@ -228,7 +235,7 @@ export default function StandingsTab({ pool, user, userPicks, categoryFilter = "
               {/* Participation Card */}
               <div
                 id="leaderboard-kpi-participation-card"
-                className="bg-slate-850 border border-slate-800/80 rounded-xl p-4 flex items-center gap-3.5"
+                className="bg-slate-850 border border-slate-800/80 rounded-xl p-2.5 flex items-center gap-2.5.5"
               >
                 <div className="w-10 h-10 rounded-lg bg-blue-500/10 border border-blue-500/25 flex items-center justify-center flex-shrink-0">
                   <Users className="w-5 h-5 text-blue-400" />
@@ -257,7 +264,7 @@ export default function StandingsTab({ pool, user, userPicks, categoryFilter = "
                   <div
                     key={row.userId}
                     onClick={() => setSelectedUser(isSelected ? null : row)}
-                    className={`flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 rounded-xl border transition-all duration-200 cursor-pointer ${
+                    className={`flex flex-col sm:flex-row justify-between items-start sm:items-center p-2.5 rounded-xl border transition-all duration-200 cursor-pointer ${
                       isSelected
                         ? "bg-emerald-500/10 border-emerald-500/30"
                         : isCurrentUser
@@ -265,7 +272,7 @@ export default function StandingsTab({ pool, user, userPicks, categoryFilter = "
                         : "bg-slate-850 hover:bg-slate-800/80 border-slate-850 hover:border-slate-800"
                     }`}
                   >
-                    <div className="flex items-center gap-3.5 w-full sm:w-auto">
+                    <div className="flex items-center gap-2.5.5 w-full sm:w-auto">
                       <div className="w-12 flex justify-start">{getRankBadge(index)}</div>
                       
                       {row.userPhotoURL ? (
@@ -297,7 +304,7 @@ export default function StandingsTab({ pool, user, userPicks, categoryFilter = "
                     </div>
 
                     {/* Desktop Status counters */}
-                    <div className="flex items-center gap-6 mt-3 sm:mt-0 w-full sm:w-auto justify-between sm:justify-end border-t border-slate-800/60 sm:border-t-0 pt-2 sm:pt-0">
+                    <div className="flex items-center gap-2 mt-3 sm:mt-0 w-full sm:w-auto justify-between sm:justify-end border-t border-slate-800/60 sm:border-t-0 pt-2 sm:pt-0">
                       <div className="hidden sm:block text-right">
                         <span className="text-slate-400 text-[11px] block">CORRECT PICKS</span>
                         <span className="text-xs font-mono font-bold text-white">
@@ -321,14 +328,14 @@ export default function StandingsTab({ pool, user, userPicks, categoryFilter = "
       </div>
 
       {/* User Picks Comparison (Right 1 column) */}
-      <div className="space-y-4">
-        <h2 className="text-xl font-bold text-white flex items-center gap-2 pb-2 border-b border-slate-800">
+      <div className="space-y-2">
+        <h2 className="text-xl font-bold text-white flex items-center gap-2 pb-1 border-b border-slate-800">
           <ShieldAlert className="w-5 h-5 text-emerald-400" /> Predictions Detail
         </h2>
 
         {selectedUser ? (
-          <div className="bg-slate-800 border border-slate-700/60 rounded-2xl p-5 shadow-xl space-y-4 max-h-[75vh] overflow-y-auto">
-            <div className="flex items-center gap-3 pb-3 border-b border-slate-700">
+          <div className="bg-slate-800 border border-slate-700/60 rounded-2xl p-3 shadow-xl space-y-2 max-h-[75vh] overflow-y-auto">
+            <div className="flex items-center gap-2.5 pb-1 border-b border-slate-700">
               {selectedUser.userPhotoURL ? (
                 <img
                   src={selectedUser.userPhotoURL}
@@ -402,7 +409,9 @@ export default function StandingsTab({ pool, user, userPicks, categoryFilter = "
                         if (parts[i] === officialParts[i]) matches += 1;
                       }
                       isCorrect = (matches === 4);
-                      scoreText = `${matches}/4 correct (+${matches * (q.points / 4)} pts)`;
+                      const basePts = matches * (getPoints(q.id, q.points) / 4);
+                      const bonus = matches === 4 ? 10 : 0;
+                      scoreText = `${matches}/4 correct (+${basePts}${bonus ? ` and +${bonus} bonus` : ''} pts)`;
                     }
                   } else {
                     pickLabel = "No prediction";
@@ -417,22 +426,22 @@ export default function StandingsTab({ pool, user, userPicks, categoryFilter = "
                   }
                   pickLabel = std ? `${baseLabel} (${std.overallRecord})` : baseLabel;
                   if (officialWinner) {
-                    scoreText = isCorrect ? `Correct (+${q.points} pts)` : `Incorrect (+0 pts)`;
+                    scoreText = isCorrect ? `Correct (+${getPoints(q.id, q.points)} pts)` : `Incorrect (+0 pts)`;
                   }
                 }
 
                 return (
-                  <div key={q.id} className="p-3 bg-slate-900/60 rounded-xl border border-slate-700/20 space-y-1">
+                  <div key={q.id} className="p-2.5 bg-slate-900/60 rounded-xl border border-slate-700/20 space-y-1">
                     <div className="flex justify-between items-start gap-2">
                       <span className="text-[11px] font-bold text-slate-400 leading-tight">
                         {q.title}
                       </span>
-                      <span className="text-[9px] font-mono font-bold text-slate-500">
-                        {q.points} pts
+                      <span className="text-[9px] font-mono font-bold text-slate-500 shrink-0">
+                        {getPoints(q.id, q.points)} pts
                       </span>
                     </div>
 
-                    <div className="flex justify-between items-center gap-3 pt-1">
+                    <div className="flex justify-between items-center gap-2.5 pt-1">
                       <span className={`text-xs font-bold ${userPick ? "text-white" : "text-slate-600 italic"}`}>
                         {pickLabel}
                       </span>

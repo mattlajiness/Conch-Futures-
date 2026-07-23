@@ -37,6 +37,7 @@ export default function AdminTab({ pool, onPoolUpdated, categoryFilter = "all", 
   
   // Configuration state
   const [activeQuestions, setActiveQuestions] = useState<string[]>([]);
+  const [customPoints, setCustomPoints] = useState<Record<string, number>>({});
   const [savingConfig, setSavingConfig] = useState(false);
   
   // Notification status
@@ -49,6 +50,9 @@ export default function AdminTab({ pool, onPoolUpdated, categoryFilter = "all", 
       setResults({});
     }
 
+    if (pool.customPoints) {
+      setCustomPoints(pool.customPoints);
+    }
     if (pool.activeQuestions) {
       setActiveQuestions(pool.activeQuestions);
     } else {
@@ -186,6 +190,17 @@ export default function AdminTab({ pool, onPoolUpdated, categoryFilter = "all", 
   };
 
   // CONFIGURATION HELPERS
+  const handlePointsChange = (qId: string, points: number) => {
+    setCustomPoints(prev => ({
+      ...prev,
+      [qId]: points
+    }));
+  };
+
+  const getPoints = (q: { id: string, points: number }) => {
+    return customPoints[q.id] !== undefined ? customPoints[q.id] : q.points;
+  };
+
   const handleToggleQuestion = (questionId: string) => {
     setActiveQuestions((prev) => {
       if (prev.includes(questionId)) {
@@ -224,11 +239,13 @@ export default function AdminTab({ pool, onPoolUpdated, categoryFilter = "all", 
     try {
       await updateDoc(doc(db, path), {
         activeQuestions,
+        customPoints,
       });
 
       const updatedPool: Pool = {
         ...pool,
         activeQuestions,
+        customPoints,
       };
       onPoolUpdated(updatedPool);
 
@@ -255,12 +272,12 @@ export default function AdminTab({ pool, onPoolUpdated, categoryFilter = "all", 
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-2">
       {/* Tab Switcher */}
-      <div className="flex border-b border-slate-700/60 pb-px mb-4">
+      <div className="flex border-b border-slate-700/60 pb-px mb-2">
         <button
           onClick={() => setActiveTab("grades")}
-          className={`flex items-center gap-2 px-5 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 transition-all cursor-pointer ${
+          className={`flex items-center gap-2 px-2 py-1.5 text-xs font-bold uppercase tracking-wider border-b-2 transition-all cursor-pointer ${
             activeTab === "grades"
               ? "border-emerald-500 text-emerald-400"
               : "border-transparent text-slate-400 hover:text-slate-200"
@@ -270,7 +287,7 @@ export default function AdminTab({ pool, onPoolUpdated, categoryFilter = "all", 
         </button>
         <button
           onClick={() => setActiveTab("config")}
-          className={`flex items-center gap-2 px-5 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 transition-all cursor-pointer ${
+          className={`flex items-center gap-2 px-2 py-1.5 text-xs font-bold uppercase tracking-wider border-b-2 transition-all cursor-pointer ${
             activeTab === "config"
               ? "border-emerald-500 text-emerald-400"
               : "border-transparent text-slate-400 hover:text-slate-200"
@@ -283,7 +300,7 @@ export default function AdminTab({ pool, onPoolUpdated, categoryFilter = "all", 
       {/* Banner message */}
       {message && (
         <div
-          className={`p-3.5 rounded-xl border text-xs font-semibold flex items-center justify-between gap-3 animate-fadeIn ${
+          className={`p-3.5 rounded-xl border text-xs font-semibold flex items-center justify-between gap-2 animate-fadeIn ${
             message.type === "success"
               ? "bg-emerald-500/10 border-emerald-500/25 text-emerald-400"
               : "bg-rose-500/10 border-rose-500/25 text-rose-400"
@@ -298,8 +315,8 @@ export default function AdminTab({ pool, onPoolUpdated, categoryFilter = "all", 
 
       {activeTab === "config" ? (
         // CONFIGURATION PANEL
-        <div className="space-y-8">
-          <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-5">
+        <div className="space-y-5">
+          <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-3">
             <h3 className="font-bold text-emerald-400 text-sm flex items-center gap-2">
               <Sparkles className="w-4 h-4" /> Pick Your Pool&apos;s Active Futures
             </h3>
@@ -309,7 +326,7 @@ export default function AdminTab({ pool, onPoolUpdated, categoryFilter = "all", 
           </div>
 
           {/* Sticky header controls for Config */}
-          <div className="bg-slate-800 border border-slate-700/60 rounded-xl p-4 flex justify-between items-center gap-4 sticky top-4 z-20 shadow-md">
+          <div className="bg-slate-800 border border-slate-700/60 rounded-xl p-3 flex justify-between items-center gap-2 sticky top-3 z-20 shadow-md">
             <div>
               <h4 className="text-white text-xs font-extrabold uppercase tracking-wider">Active Futures Pool Setup</h4>
               <p className="text-slate-400 text-[11px] mt-0.5">Toggle categories to restrict or expand active questions.</p>
@@ -317,15 +334,15 @@ export default function AdminTab({ pool, onPoolUpdated, categoryFilter = "all", 
             <button
               onClick={handleSaveConfig}
               disabled={savingConfig}
-              className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold disabled:opacity-50 transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold disabled:opacity-50 transition-colors cursor-pointer"
             >
               <Save className="w-3.5 h-3.5" /> {savingConfig ? "Saving..." : "Save Active Config"}
             </button>
           </div>
 
           {/* Group 1: Awards */}
-          <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-5 space-y-4">
-            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 border-b border-slate-800 pb-3">
+          <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-3 space-y-2">
+            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 border-b border-slate-800 pb-1">
               <h3 className="text-sm font-extrabold text-white uppercase tracking-wider flex items-center gap-2">
                 <Award className="w-4 h-4 text-emerald-400" /> Major Awards
               </h3>
@@ -345,14 +362,14 @@ export default function AdminTab({ pool, onPoolUpdated, categoryFilter = "all", 
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               {awardsQuestions.map((q) => {
                 const isActive = activeQuestions.includes(q.id);
                 return (
                   <div
                     key={q.id}
                     onClick={() => handleToggleQuestion(q.id)}
-                    className={`p-3.5 rounded-xl border text-left cursor-pointer transition-all duration-150 flex items-center gap-3 ${
+                    className={`p-3.5 rounded-xl border text-left cursor-pointer transition-all duration-150 flex items-center gap-2 ${
                       isActive
                         ? "bg-emerald-500/10 border-emerald-500/30 text-white"
                         : "bg-slate-800/40 border-slate-800 text-slate-400 hover:bg-slate-800/60"
@@ -363,10 +380,22 @@ export default function AdminTab({ pool, onPoolUpdated, categoryFilter = "all", 
                     ) : (
                       <Square className="w-4 h-4 text-slate-600 flex-shrink-0" />
                     )}
-                    <div>
+                                        <div className="flex-1">
                       <h4 className="font-bold text-xs">{q.title}</h4>
                       <p className="text-[10px] text-slate-500 mt-0.5">{q.subtitle}</p>
                     </div>
+                    {isActive && (
+                      <div className="shrink-0 flex flex-col items-center ml-2" onClick={(e) => e.stopPropagation()}>
+                        <label className="text-[9px] uppercase tracking-wider text-slate-400 font-bold mb-1">Pts</label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={getPoints(q)}
+                          onChange={(e) => handlePointsChange(q.id, parseInt(e.target.value) || 0)}
+                          className="w-12 bg-slate-900 border border-slate-700 rounded px-1.5 py-1 text-xs text-white text-center focus:outline-none focus:border-emerald-500 font-mono"
+                        />
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -374,8 +403,8 @@ export default function AdminTab({ pool, onPoolUpdated, categoryFilter = "all", 
           </div>
 
           {/* Group 2: Division Champions */}
-          <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-5 space-y-4">
-            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 border-b border-slate-800 pb-3">
+          <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-3 space-y-2">
+            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 border-b border-slate-800 pb-1">
               <h3 className="text-sm font-extrabold text-white uppercase tracking-wider flex items-center gap-2">
                 <Compass className="w-4 h-4 text-emerald-400" /> Division Champions (Winner Only)
               </h3>
@@ -395,14 +424,14 @@ export default function AdminTab({ pool, onPoolUpdated, categoryFilter = "all", 
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               {divisionQuestions.map((q) => {
                 const isActive = activeQuestions.includes(q.id);
                 return (
                   <div
                     key={q.id}
                     onClick={() => handleToggleQuestion(q.id)}
-                    className={`p-3.5 rounded-xl border text-left cursor-pointer transition-all duration-150 flex items-center gap-3 ${
+                    className={`p-3.5 rounded-xl border text-left cursor-pointer transition-all duration-150 flex items-center gap-2 ${
                       isActive
                         ? "bg-emerald-500/10 border-emerald-500/30 text-white"
                         : "bg-slate-800/40 border-slate-800 text-slate-400 hover:bg-slate-800/60"
@@ -413,10 +442,22 @@ export default function AdminTab({ pool, onPoolUpdated, categoryFilter = "all", 
                     ) : (
                       <Square className="w-4 h-4 text-slate-600 flex-shrink-0" />
                     )}
-                    <div>
+                                        <div className="flex-1">
                       <h4 className="font-bold text-xs">{q.title}</h4>
                       <p className="text-[10px] text-slate-500 mt-0.5">{q.subtitle}</p>
                     </div>
+                    {isActive && (
+                      <div className="shrink-0 flex flex-col items-center ml-2" onClick={(e) => e.stopPropagation()}>
+                        <label className="text-[9px] uppercase tracking-wider text-slate-400 font-bold mb-1">Pts</label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={getPoints(q)}
+                          onChange={(e) => handlePointsChange(q.id, parseInt(e.target.value) || 0)}
+                          className="w-12 bg-slate-900 border border-slate-700 rounded px-1.5 py-1 text-xs text-white text-center focus:outline-none focus:border-emerald-500 font-mono"
+                        />
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -424,8 +465,8 @@ export default function AdminTab({ pool, onPoolUpdated, categoryFilter = "all", 
           </div>
 
           {/* Group 3: Over/Unders */}
-          <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-5 space-y-4">
-            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 border-b border-slate-800 pb-3">
+          <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-3 space-y-2">
+            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 border-b border-slate-800 pb-1">
               <h3 className="text-sm font-extrabold text-white uppercase tracking-wider flex items-center gap-2">
                 <ShieldAlert className="w-4 h-4 text-emerald-400" /> Over / Under Win Totals
               </h3>
@@ -445,14 +486,14 @@ export default function AdminTab({ pool, onPoolUpdated, categoryFilter = "all", 
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               {ouQuestions.map((q) => {
                 const isActive = activeQuestions.includes(q.id);
                 return (
                   <div
                     key={q.id}
                     onClick={() => handleToggleQuestion(q.id)}
-                    className={`p-3.5 rounded-xl border text-left cursor-pointer transition-all duration-150 flex items-center gap-3 ${
+                    className={`p-3.5 rounded-xl border text-left cursor-pointer transition-all duration-150 flex items-center gap-2 ${
                       isActive
                         ? "bg-emerald-500/10 border-emerald-500/30 text-white"
                         : "bg-slate-800/40 border-slate-800 text-slate-400 hover:bg-slate-800/60"
@@ -463,10 +504,22 @@ export default function AdminTab({ pool, onPoolUpdated, categoryFilter = "all", 
                     ) : (
                       <Square className="w-4 h-4 text-slate-600 flex-shrink-0" />
                     )}
-                    <div>
+                                        <div className="flex-1">
                       <h4 className="font-bold text-xs">{q.title}</h4>
                       <p className="text-[10px] text-slate-500 mt-0.5">{q.subtitle}</p>
                     </div>
+                    {isActive && (
+                      <div className="shrink-0 flex flex-col items-center ml-2" onClick={(e) => e.stopPropagation()}>
+                        <label className="text-[9px] uppercase tracking-wider text-slate-400 font-bold mb-1">Pts</label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={getPoints(q)}
+                          onChange={(e) => handlePointsChange(q.id, parseInt(e.target.value) || 0)}
+                          className="w-12 bg-slate-900 border border-slate-700 rounded px-1.5 py-1 text-xs text-white text-center focus:outline-none focus:border-emerald-500 font-mono"
+                        />
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -474,8 +527,8 @@ export default function AdminTab({ pool, onPoolUpdated, categoryFilter = "all", 
           </div>
 
           {/* Group 4: Division Standings */}
-          <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-5 space-y-4">
-            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 border-b border-slate-800 pb-3">
+          <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-3 space-y-2">
+            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 border-b border-slate-800 pb-1">
               <h3 className="text-sm font-extrabold text-white uppercase tracking-wider flex items-center gap-2">
                 <ListOrdered className="w-4 h-4 text-emerald-400" /> NFL Division Standings (1st to 4th Place Predictor)
               </h3>
@@ -495,14 +548,14 @@ export default function AdminTab({ pool, onPoolUpdated, categoryFilter = "all", 
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               {standingsQuestions.map((q) => {
                 const isActive = activeQuestions.includes(q.id);
                 return (
                   <div
                     key={q.id}
                     onClick={() => handleToggleQuestion(q.id)}
-                    className={`p-3.5 rounded-xl border text-left cursor-pointer transition-all duration-150 flex items-center gap-3 ${
+                    className={`p-3.5 rounded-xl border text-left cursor-pointer transition-all duration-150 flex items-center gap-2 ${
                       isActive
                         ? "bg-emerald-500/10 border-emerald-500/30 text-white"
                         : "bg-slate-800/40 border-slate-800 text-slate-400 hover:bg-slate-800/60"
@@ -513,10 +566,22 @@ export default function AdminTab({ pool, onPoolUpdated, categoryFilter = "all", 
                     ) : (
                       <Square className="w-4 h-4 text-slate-600 flex-shrink-0" />
                     )}
-                    <div>
+                                        <div className="flex-1">
                       <h4 className="font-bold text-xs">{q.title}</h4>
                       <p className="text-[10px] text-slate-500 mt-0.5">{q.subtitle}</p>
                     </div>
+                    {isActive && (
+                      <div className="shrink-0 flex flex-col items-center ml-2" onClick={(e) => e.stopPropagation()}>
+                        <label className="text-[9px] uppercase tracking-wider text-slate-400 font-bold mb-1">Pts</label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={getPoints(q)}
+                          onChange={(e) => handlePointsChange(q.id, parseInt(e.target.value) || 0)}
+                          className="w-12 bg-slate-900 border border-slate-700 rounded px-1.5 py-1 text-xs text-white text-center focus:outline-none focus:border-emerald-500 font-mono"
+                        />
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -525,8 +590,8 @@ export default function AdminTab({ pool, onPoolUpdated, categoryFilter = "all", 
         </div>
       ) : (
         // GRADING PANEL
-        <div className="space-y-8">
-          <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-5">
+        <div className="space-y-5">
+          <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-3">
             <h3 className="font-bold text-amber-400 text-sm flex items-center gap-2">
               <Sparkles className="w-4 h-4" /> Enter Official Regular Season Outcomes
             </h3>
@@ -536,7 +601,7 @@ export default function AdminTab({ pool, onPoolUpdated, categoryFilter = "all", 
           </div>
 
           {/* Sticky grading controls */}
-          <div className="bg-slate-800 border border-slate-700/60 rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row justify-between items-center gap-4 sticky top-4 z-20 shadow-md">
+          <div className="bg-slate-800 border border-slate-700/60 rounded-xl p-3 sm:p-3 flex flex-col sm:flex-row justify-between items-center gap-2 sticky top-3 z-20 shadow-md">
             <div className="flex-grow">
               <h4 className="text-white text-xs font-extrabold uppercase tracking-wider">Unsaved Grades & Outcomes</h4>
               <p className="text-slate-400 text-[11px] mt-0.5">Grade predictions manually below, or auto-calculate outcomes from live NFL standings.</p>
@@ -547,7 +612,7 @@ export default function AdminTab({ pool, onPoolUpdated, categoryFilter = "all", 
                 <button
                   type="button"
                   onClick={handleAutoSyncNFL}
-                  className="flex items-center gap-1.5 px-4 py-2.5 bg-teal-600/15 hover:bg-teal-600/25 border border-teal-500/30 text-teal-400 rounded-lg text-xs font-extrabold transition-all cursor-pointer justify-center"
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 bg-teal-600/15 hover:bg-teal-600/25 border border-teal-500/30 text-teal-400 rounded-lg text-xs font-extrabold transition-all cursor-pointer justify-center"
                   title="Auto-fill results from ESPN live standing records"
                 >
                   <RefreshCw className="w-3.5 h-3.5 animate-spin-slow" /> Auto-grade with NFL Data
@@ -557,7 +622,7 @@ export default function AdminTab({ pool, onPoolUpdated, categoryFilter = "all", 
               <button
                 onClick={handleSaveResults}
                 disabled={savingResults}
-                className="flex items-center gap-1.5 px-5 py-2.5 bg-amber-600 hover:bg-amber-500 text-slate-950 font-black rounded-lg text-xs disabled:opacity-50 transition-colors cursor-pointer w-full sm:w-auto justify-center shadow-md shadow-amber-500/10"
+                className="flex items-center gap-1.5 px-2 py-1.5 bg-amber-600 hover:bg-amber-500 text-slate-950 font-black rounded-lg text-xs disabled:opacity-50 transition-colors cursor-pointer w-full sm:w-auto justify-center shadow-md shadow-amber-500/10"
               >
                 <Save className="w-4 h-4" /> {savingResults ? "Saving..." : "Save Official Results"}
               </button>
@@ -568,17 +633,17 @@ export default function AdminTab({ pool, onPoolUpdated, categoryFilter = "all", 
           
           
           {(categoryFilter === "all" || categoryFilter === "standings") && standingsQuestions.some(q => activeQuestions.includes(q.id)) && (
-            <div className="space-y-4 pt-4">
+            <div className="space-y-2 pt-4">
               <h3 className="text-sm font-extrabold uppercase tracking-widest text-amber-400 flex items-center gap-2 pb-1 border-b border-slate-800">
                 <ListOrdered className="w-4 h-4" /> NFL Division Standings Grader
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 {standingsQuestions.filter(q => activeQuestions.includes(q.id)).map((q) => {
                   const currentOrder = getStandingOrder(q.id);
                   const isFullyGraded = currentOrder.every((t) => t !== "");
 
                   return (
-                    <div key={q.id} className="bg-slate-800/80 border border-slate-700/50 rounded-xl p-5 space-y-4">
+                    <div key={q.id} className="bg-slate-800/80 border border-slate-700/50 rounded-xl p-3 space-y-2">
                       <div className="flex justify-between items-start gap-2">
                         <div>
                           <h4 className="font-bold text-white text-sm">{q.title}</h4>
@@ -603,7 +668,7 @@ export default function AdminTab({ pool, onPoolUpdated, categoryFilter = "all", 
                         ].map((slot, index) => {
                           const value = currentOrder[index];
                           return (
-                            <div key={index} className="flex items-center gap-3 bg-slate-900/40 p-2 rounded-lg border border-slate-850">
+                            <div key={index} className="flex items-center gap-2 bg-slate-900/40 p-2 rounded-lg border border-slate-850">
                               <span className={`w-36 text-[10px] font-extrabold uppercase tracking-wide ${slot.color}`}>
                                 {slot.label}
                               </span>
@@ -628,7 +693,7 @@ export default function AdminTab({ pool, onPoolUpdated, categoryFilter = "all", 
                       </div>
 
                       {isFullyGraded ? (
-                        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/5 border border-emerald-500/15 rounded-lg text-emerald-400 text-xs font-semibold">
+                        <div className="flex items-center gap-1.5 px-2 py-1.5 bg-emerald-500/5 border border-emerald-500/15 rounded-lg text-emerald-400 text-xs font-semibold">
                           <Check className="w-3.5 h-3.5" /> Official Result: {currentOrder.map(t => q.options.find(o => o.value === t)?.label.split(" ").pop() || t).join(" > ")}
                         </div>
                       ) : (
@@ -645,7 +710,7 @@ export default function AdminTab({ pool, onPoolUpdated, categoryFilter = "all", 
 
           {/* Over / Under Category */}
           {(categoryFilter === "all" || categoryFilter === "over_under") && ouQuestions.some(q => activeQuestions.includes(q.id)) && (
-            <div className="space-y-4 pt-4">
+            <div className="space-y-2 pt-4">
               <h3 className="text-sm font-extrabold uppercase tracking-widest text-amber-400 flex items-center gap-2 pb-1 border-b border-slate-800">
                 <ShieldAlert className="w-4 h-4" /> Over/Under Win Totals
               </h3>
@@ -658,7 +723,7 @@ export default function AdminTab({ pool, onPoolUpdated, categoryFilter = "all", 
                   return (
                     <div
                       key={q.id}
-                      className="p-3 hover:bg-slate-800/40 transition-colors flex flex-col xl:flex-row xl:justify-between xl:items-center gap-3"
+                      className="p-3 hover:bg-slate-800/40 transition-colors flex flex-col xl:flex-row xl:justify-between xl:items-center gap-2"
                     >
                       <div className="flex flex-col">
                         <h4 className="font-bold text-white text-xs">{teamName}</h4>
@@ -669,7 +734,7 @@ export default function AdminTab({ pool, onPoolUpdated, categoryFilter = "all", 
                       <div className="flex bg-slate-900 rounded-lg p-0.5 border border-slate-700 shrink-0 self-start xl:self-auto">
                         <button
                           onClick={() => handleSelectWinner(q.id, "OVER")}
-                          className={`px-3 py-1.5 rounded-md text-[10px] font-bold transition-all duration-150 cursor-pointer ${
+                          className={`px-2 py-1.5 rounded-md text-[10px] font-bold transition-all duration-150 cursor-pointer ${
                             currentWinner === "OVER"
                               ? "bg-amber-600 text-white shadow"
                               : "text-slate-400 hover:text-slate-200 hover:bg-slate-800"
@@ -679,7 +744,7 @@ export default function AdminTab({ pool, onPoolUpdated, categoryFilter = "all", 
                         </button>
                         <button
                           onClick={() => handleSelectWinner(q.id, "UNDER")}
-                          className={`px-3 py-1.5 rounded-md text-[10px] font-bold transition-all duration-150 cursor-pointer ${
+                          className={`px-2 py-1.5 rounded-md text-[10px] font-bold transition-all duration-150 cursor-pointer ${
                             currentWinner === "UNDER"
                               ? "bg-amber-600 text-white shadow"
                               : "text-slate-400 hover:text-slate-200 hover:bg-slate-800"

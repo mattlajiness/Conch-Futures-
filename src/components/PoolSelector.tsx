@@ -252,9 +252,9 @@ export default function PoolSelector({ user, onSelectPool }: PoolSelectorProps) 
   };
 
   return (
-    <div className="max-w-4xl mx-auto py-8 px-4 sm:px-6">
+    <div className="max-w-4xl mx-auto py-2 px-2 sm:px-4">
       {/* Hero Welcome banner */}
-      <div className="relative overflow-hidden bg-[#09222c] border border-[#113a4b]/80 rounded-2xl p-6 sm:p-8 mb-10 shadow-xl">
+      <div className="relative overflow-hidden bg-[#09222c] border border-[#113a4b]/80 rounded-xl p-4 sm:p-3 mb-6 shadow-xl">
         <div className="absolute right-0 bottom-0 opacity-10 pointer-events-none transform translate-y-6 translate-x-6">
           <Logo size={240} variant="full" />
         </div>
@@ -270,14 +270,14 @@ export default function PoolSelector({ user, onSelectPool }: PoolSelectorProps) 
 
       {/* Invitation Active / Checking banner */}
       {checkingInvite && (
-        <div className="bg-[#09222c] border border-[#113a4b]/50 rounded-2xl p-4 mb-8 flex items-center gap-3 shadow-md">
+        <div className="bg-[#09222c] border border-[#113a4b]/50 rounded-2xl p-4 mb-3 flex items-center gap-3 shadow-md">
           <div className="w-4 h-4 rounded-full border-2 border-teal-500/25 border-t-teal-400 animate-spin"></div>
           <p className="text-slate-400 text-xs font-mono">Verifying your invitation code...</p>
         </div>
       )}
 
       {inviteError && !invitePool && (
-        <div className="bg-rose-500/10 border border-rose-500/20 rounded-2xl p-5 mb-8 text-rose-300 text-xs flex items-start gap-3 shadow-md">
+        <div className="bg-rose-500/10 border border-rose-500/20 rounded-2xl p-5 mb-3 text-rose-300 text-xs flex items-start gap-3 shadow-md">
           <AlertCircle className="w-5 h-5 flex-shrink-0 text-rose-400" />
           <div className="flex-grow">
             <h4 className="font-bold text-sm text-rose-200">Invalid Invitation Link</h4>
@@ -296,11 +296,11 @@ export default function PoolSelector({ user, onSelectPool }: PoolSelectorProps) 
       )}
 
       {invitePool && (
-        <div className="bg-slate-800 border-2 border-emerald-500/50 rounded-2xl p-6 mb-8 shadow-xl relative overflow-hidden">
+        <div className="bg-slate-800 border-2 border-emerald-500/50 rounded-2xl p-3 mb-3 shadow-xl relative overflow-hidden">
           <div className="absolute top-0 right-0 p-3 bg-emerald-500/10 border-b border-l border-emerald-500/20 rounded-bl-xl text-[10px] font-bold text-emerald-400 uppercase tracking-wider font-mono">
             Active Invitation
           </div>
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
             <div className="space-y-2">
               <h3 className="text-xs font-bold text-emerald-400 uppercase tracking-widest font-mono">
                 🏈 You&apos;ve Been Invited!
@@ -371,7 +371,7 @@ export default function PoolSelector({ user, onSelectPool }: PoolSelectorProps) 
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 items-start">
         {/* Left column: Pools List */}
         <div className="space-y-6">
           <h2 className="text-xl font-bold text-white flex items-center gap-2">
@@ -390,7 +390,7 @@ export default function PoolSelector({ user, onSelectPool }: PoolSelectorProps) 
               <span>{error}</span>
             </div>
           ) : pools.length === 0 ? (
-            <div className="bg-[#09222c]/40 border border-[#113a4b]/50 rounded-xl p-8 text-center">
+            <div className="bg-[#09222c]/40 border border-[#113a4b]/50 rounded-xl p-4 text-center">
               <Users className="w-10 h-10 text-teal-600 mx-auto mb-3" />
               <p className="text-slate-400 text-sm mb-4">You haven&apos;t joined any pools yet.</p>
               <button
@@ -410,7 +410,7 @@ export default function PoolSelector({ user, onSelectPool }: PoolSelectorProps) 
                     onClick={() => onSelectPool(pool)}
                     className="group relative bg-[#09222c] hover:bg-[#0c2e3b] border border-[#113a4b]/60 hover:border-teal-500/40 rounded-xl p-5 cursor-pointer shadow-md hover:shadow-lg transition-all duration-200"
                   >
-                    <div className="flex justify-between items-start gap-4">
+                    <div className="flex justify-between items-start gap-2">
                       <div>
                         <h3 className="font-bold text-white group-hover:text-teal-400 transition-colors duration-150">
                           {pool.name}
@@ -449,7 +449,7 @@ export default function PoolSelector({ user, onSelectPool }: PoolSelectorProps) 
         {/* Right column: Action Cards (Join / Create) */}
         <div className="space-y-6">
           {/* Join Pool Form */}
-          <div className="bg-[#09222c] border border-[#113a4b]/80 rounded-2xl p-6 shadow-xl">
+          <div className="bg-[#09222c] border border-[#113a4b]/80 rounded-2xl p-3 shadow-xl">
             <h2 className="text-lg font-bold text-white flex items-center gap-2 mb-4">
               <LogIn className="w-5 h-5 text-teal-400" /> Join a Pool
             </h2>
@@ -486,9 +486,9 @@ export default function PoolSelector({ user, onSelectPool }: PoolSelectorProps) 
           </div>
 
           {/* Create Pool Form or trigger */}
-          <div className="bg-[#09222c] border border-[#113a4b]/80 rounded-2xl p-6 shadow-xl">
+          <div className="bg-[#09222c] border border-[#113a4b]/80 rounded-2xl p-3 shadow-xl">
             {!showCreate ? (
-              <div className="text-center py-4">
+              <div className="text-center py-2">
                 <p className="text-slate-300 text-sm mb-4">Want to run your own pool with custom standings?</p>
                 <button
                   onClick={() => setShowCreate(true)}
