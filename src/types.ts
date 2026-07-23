@@ -6,7 +6,8 @@ export interface Pool {
   creatorId: string;
   creatorName: string;
   createdAt: any; // Timestamp or date string
-  results?: Record<string, string>; // Map of categoryId -> officialWinner
+  results?: Record<string, string>;
+  tiebreakerResult?: string; // Map of categoryId -> officialWinner
   activeQuestions?: string[]; // Optional active question IDs for this pool
   customPoints?: Record<string, number>; // Optional custom points mapping
 }
@@ -16,6 +17,7 @@ export interface Picks {
   userDisplayName: string;
   userPhotoURL?: string;
   selections: Record<string, string>; // Map of categoryId -> selectedOption
+  tiebreaker?: string;
   updatedAt: any; // Timestamp
 }
 
@@ -36,4 +38,6 @@ export interface StandingRow {
   correctCount: number;
   totalPicks: number;
   picks: Record<string, string>;
+  tiebreaker?: string;
+  tiebreakerDiff?: number;
 }

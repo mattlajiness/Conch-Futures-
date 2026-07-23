@@ -291,7 +291,7 @@ export default function PoolDetail({ pool: initialPool, user, onBack }: PoolDeta
         )}
       </div>
 
-      {/* Category Filter Selector */}
+      {activeTab !== "picks" && (
       <div id="category-filter-bar" className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 bg-slate-900 border border-slate-800 p-3 rounded-xl mb-2 shadow-inner">
         <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider font-mono flex items-center gap-1.5">
           <Sparkles className="w-3.5 h-3.5 text-emerald-400" /> Filter Futures:
@@ -317,6 +317,7 @@ export default function PoolDetail({ pool: initialPool, user, onBack }: PoolDeta
           ))}
         </div>
       </div>
+      )}
 
       {/* Tabs panels render */}
       <div className="bg-slate-900 border border-slate-800/80 rounded-xl p-3 sm:p-2 min-h-[50vh] shadow-inner">

@@ -1,10 +1,18 @@
 import React, { useState, useEffect } from "react";
 import { collection, query, where, getDocs, doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
-import { Trophy, Plus, LogIn, Lock, Users, ArrowRight, AlertCircle, Sparkles } from "lucide-react";
+import { Trophy, Plus, LogIn, Lock, Users, ArrowRight, AlertCircle, Sparkles, Heart, Activity, UserPlus, CheckCircle2 } from "lucide-react";
 import { db, auth, OperationType, handleFirestoreError } from "../lib/firebase";
 import { FUTURES_QUESTIONS } from "../constants";
 import { Pool } from "../types";
 import Logo from "./Logo";
+
+type ActivityItem = {
+  id: string;
+  type: 'join' | 'pick' | 'leaderboard';
+  message: string;
+  timestamp: Date;
+  poolName: string;
+};
 
 interface PoolSelectorProps {
   user: any;
@@ -22,6 +30,61 @@ export default function PoolSelector({ user, onSelectPool }: PoolSelectorProps) 
   const [newDesc, setNewDesc] = useState("");
   const [newCode, setNewCode] = useState("");
   const [creating, setCreating] = useState(false);
+
+  // Activity Feed State
+  const [activities, setActivities] = useState<ActivityItem[]>([]);
+  const [loadingActivities, setLoadingActivities] = useState(false);
+
+  useEffect(() => {
+    if (pools.length === 0) return;
+
+    const loadActivities = async () => {
+      setLoadingActivities(true);
+      try {
+        const feed: ActivityItem[] = [];
+
+        for (const pool of pools) {
+          if (pool.createdAt) {
+            const createdAt = pool.createdAt?.toDate ? pool.createdAt.toDate() : new Date();
+            feed.push({
+              id: `pool_create_${pool.id}`,
+              type: 'leaderboard',
+              message: `Pool created by ${pool.creatorName}`,
+              timestamp: createdAt,
+              poolName: pool.name
+            });
+          }
+
+          const picksQuery = query(collection(db, `pools/${pool.id}/picks`));
+          const pickSnaps = await getDocs(picksQuery);
+          pickSnaps.forEach(docSnap => {
+            const data = docSnap.data();
+            if (data.updatedAt) {
+               const ts = data.updatedAt?.toDate ? data.updatedAt.toDate() : new Date();
+               const isJoin = !data.selections || Object.keys(data.selections).length === 0;
+               
+               feed.push({
+                 id: `pick_${pool.id}_${docSnap.id}`,
+                 type: isJoin ? 'join' : 'pick',
+                 message: isJoin ? `${data.userDisplayName} joined the pool` : `${data.userDisplayName} locked in their picks`,
+                 timestamp: ts,
+                 poolName: pool.name
+               });
+            }
+          });
+        }
+
+        feed.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+        setActivities(feed.slice(0, 10));
+      } catch (e) {
+        console.error("Failed to load activities", e);
+      } finally {
+        setLoadingActivities(false);
+      }
+    };
+
+    loadActivities();
+  }, [pools]);
 
   // Join Pool State
   const [joinCode, setJoinCode] = useState("");
@@ -252,19 +315,31 @@ export default function PoolSelector({ user, onSelectPool }: PoolSelectorProps) 
   };
 
   return (
-    <div className="max-w-4xl mx-auto py-2 px-2 sm:px-4">
+    <div className="max-w-6xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
       {/* Hero Welcome banner */}
-      <div className="relative overflow-hidden bg-[#09222c] border border-[#113a4b]/80 rounded-xl p-4 sm:p-3 mb-6 shadow-xl">
+      <div className="relative overflow-hidden bg-gradient-to-br from-[#09222c] to-[#041014] border border-[#113a4b]/80 rounded-2xl p-6 sm:p-10 mb-8 shadow-2xl flex flex-col md:flex-row items-center gap-8 justify-between">
         <div className="absolute right-0 bottom-0 opacity-10 pointer-events-none transform translate-y-6 translate-x-6">
-          <Logo size={240} variant="full" />
+          <Logo size={320} variant="full" />
         </div>
         <div className="max-w-2xl relative z-10">
-          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white mb-3">
-            Conch Predictor Series
+          <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-white mb-4">
+            Welcome to the <br/>
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-cyan-400">Conch Predictor Series</span>
           </h1>
-          <p className="text-slate-300 text-sm sm:text-base leading-relaxed">
-            Rub the magic conch and compete against your friends to see who can predict NFL futures the best! Choose division winners, major awards, super bowl champions, and over/under win totals. Create a pool, invite friends with a code, and track standings as the season unfolds.
+          <p className="text-slate-300 text-sm sm:text-base leading-relaxed mb-6">
+            Compete against your friends to see who can predict NFL futures the best! Join a private pool or create your own, lock in your picks, and track live standings all season long.
           </p>
+          <div className="flex gap-4">
+             <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-teal-500/10 text-teal-400 rounded-lg text-xs font-mono font-bold border border-teal-500/20"><Trophy className="w-4 h-4"/> 140+ Futures</span>
+             <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-rose-500/10 text-rose-400 rounded-lg text-xs font-mono font-bold border border-rose-500/20"><Heart className="w-4 h-4"/> Live Grading</span>
+          </div>
+        </div>
+        
+        <div className="relative z-10 hidden md:flex items-center justify-center p-6 bg-slate-900/50 backdrop-blur border border-slate-700/50 rounded-2xl shadow-xl">
+           <div className="flex flex-col gap-3">
+             <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">Are you ready for kickoff?</div>
+             <div className="text-[10px] text-slate-500">Pick division winners, major awards,<br/>and over/under win totals.</div>
+           </div>
         </div>
       </div>
 
@@ -371,9 +446,9 @@ export default function PoolSelector({ user, onSelectPool }: PoolSelectorProps) 
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 items-start">
-        {/* Left column: Pools List */}
-        <div className="space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+        {/* Left column: Pools List (spans 2 columns on lg) */}
+        <div className="lg:col-span-2 space-y-6">
           <h2 className="text-xl font-bold text-white flex items-center gap-2">
             <Trophy className="w-5 h-5 text-amber-400" /> Your Active Pools
           </h2>
@@ -401,7 +476,7 @@ export default function PoolSelector({ user, onSelectPool }: PoolSelectorProps) 
               </button>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {pools.map((pool) => {
                 const isCreator = pool.creatorId === user.uid;
                 return (
@@ -567,6 +642,46 @@ export default function PoolSelector({ user, onSelectPool }: PoolSelectorProps) 
               </div>
             )}
           </div>
+          {/* Activity Feed */}
+          <div className="bg-[#09222c] border border-[#113a4b]/80 rounded-2xl p-4 shadow-xl">
+            <h2 className="text-sm font-extrabold text-white flex items-center gap-2 mb-4 uppercase tracking-wider">
+              <Activity className="w-4 h-4 text-teal-400" /> Recent Activity
+            </h2>
+            {loadingActivities ? (
+              <div className="flex justify-center items-center py-6">
+                <div className="w-5 h-5 rounded-full border-2 border-teal-500/25 border-t-teal-400 animate-spin"></div>
+              </div>
+            ) : activities.length === 0 ? (
+              <div className="text-center py-6 text-slate-400 text-xs italic">
+                No recent activity to display.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {activities.map(act => (
+                  <div key={act.id} className="flex gap-3 items-start p-2 rounded-lg hover:bg-slate-800/30 transition-colors">
+                    <div className="mt-0.5 shrink-0">
+                      {act.type === 'join' && <UserPlus className="w-4 h-4 text-indigo-400" />}
+                      {act.type === 'pick' && <CheckCircle2 className="w-4 h-4 text-emerald-400" />}
+                      {act.type === 'leaderboard' && <Trophy className="w-4 h-4 text-amber-400" />}
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-200">
+                        {act.message}
+                      </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-[9px] text-teal-500/70 font-mono uppercase tracking-wider">{act.poolName}</span>
+                        <span className="text-[9px] text-slate-500">•</span>
+                        <span className="text-[9px] text-slate-500">
+                          {act.timestamp.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} at {act.timestamp.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
         </div>
       </div>
     </div>

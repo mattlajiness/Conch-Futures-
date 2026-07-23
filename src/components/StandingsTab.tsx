@@ -110,6 +110,11 @@ export default function StandingsTab({ pool, user, userPicks, categoryFilter = "
           }
         });
 
+        let tiebreakerDiff: number | undefined;
+        if (pool.tiebreakerResult && pick.tiebreaker) {
+          tiebreakerDiff = Math.abs(Number(pick.tiebreaker) - Number(pool.tiebreakerResult));
+        }
+
         return {
           userId: pick.userId,
           userDisplayName: pick.userDisplayName || "Anonymous Player",
@@ -118,13 +123,22 @@ export default function StandingsTab({ pool, user, userPicks, categoryFilter = "
           correctCount,
           totalPicks,
           picks: pick.selections,
+          tiebreaker: pick.tiebreaker,
+          tiebreakerDiff,
         };
       });
 
-      // Sort by score DESC, then correct count DESC, then alphabetically by name
+      // Sort by score DESC, then correct count DESC, then tiebreaker diff ASC, then alphabetically by name
       rows.sort((a, b) => {
         if (b.score !== a.score) return b.score - a.score;
         if (b.correctCount !== a.correctCount) return b.correctCount - a.correctCount;
+        if (a.tiebreakerDiff !== undefined && b.tiebreakerDiff !== undefined) {
+           if (a.tiebreakerDiff !== b.tiebreakerDiff) return a.tiebreakerDiff - b.tiebreakerDiff;
+        } else if (a.tiebreakerDiff !== undefined) {
+           return -1; // a has tiebreaker, b doesn't
+        } else if (b.tiebreakerDiff !== undefined) {
+           return 1; // b has tiebreaker, a doesn't
+        }
         return a.userDisplayName.localeCompare(b.userDisplayName);
       });
 
@@ -193,7 +207,7 @@ export default function StandingsTab({ pool, user, userPicks, categoryFilter = "
               {/* Leader Card */}
               <div
                 id="leaderboard-kpi-leader-card"
-                className="bg-slate-850 border border-slate-800/80 rounded-xl p-2.5 flex items-center gap-2.5.5"
+                className="bg-slate-850 border border-slate-800/80 rounded-xl p-2.5 flex items-center gap-3"
               >
                 <div className="w-10 h-10 rounded-lg bg-amber-500/10 border border-amber-500/25 flex items-center justify-center flex-shrink-0">
                   <Crown className="w-5 h-5 text-amber-400" />
@@ -214,7 +228,7 @@ export default function StandingsTab({ pool, user, userPicks, categoryFilter = "
               {/* Average Score Card */}
               <div
                 id="leaderboard-kpi-avg-score-card"
-                className="bg-slate-850 border border-slate-800/80 rounded-xl p-2.5 flex items-center gap-2.5.5"
+                className="bg-slate-850 border border-slate-800/80 rounded-xl p-2.5 flex items-center gap-3"
               >
                 <div className="w-10 h-10 rounded-lg bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center flex-shrink-0">
                   <TrendingUp className="w-5 h-5 text-emerald-400" />
@@ -235,7 +249,7 @@ export default function StandingsTab({ pool, user, userPicks, categoryFilter = "
               {/* Participation Card */}
               <div
                 id="leaderboard-kpi-participation-card"
-                className="bg-slate-850 border border-slate-800/80 rounded-xl p-2.5 flex items-center gap-2.5.5"
+                className="bg-slate-850 border border-slate-800/80 rounded-xl p-2.5 flex items-center gap-3"
               >
                 <div className="w-10 h-10 rounded-lg bg-blue-500/10 border border-blue-500/25 flex items-center justify-center flex-shrink-0">
                   <Users className="w-5 h-5 text-blue-400" />
@@ -272,7 +286,7 @@ export default function StandingsTab({ pool, user, userPicks, categoryFilter = "
                         : "bg-slate-850 hover:bg-slate-800/80 border-slate-850 hover:border-slate-800"
                     }`}
                   >
-                    <div className="flex items-center gap-2.5.5 w-full sm:w-auto">
+                    <div className="flex items-center gap-3 w-full sm:w-auto">
                       <div className="w-12 flex justify-start">{getRankBadge(index)}</div>
                       
                       {row.userPhotoURL ? (
