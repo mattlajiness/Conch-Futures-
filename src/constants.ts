@@ -77,7 +77,7 @@ export const FUTURES_QUESTIONS: FutureQuestion[] = [
   // 1. Championship & Awards (Huge Points)
   {
     id: "super_bowl",
-    category: "award",
+    category: "championship",
     title: "Super Bowl LXI Winner",
     subtitle: "Who will raise the Lombardi Trophy at the end of the 2026-2027 season?",
     points: 25,
@@ -85,7 +85,7 @@ export const FUTURES_QUESTIONS: FutureQuestion[] = [
   },
   {
     id: "afc_champ",
-    category: "award",
+    category: "championship",
     title: "AFC Champion",
     subtitle: "Which American Football Conference team wins the conference in 2026-2027?",
     points: 15,
@@ -93,7 +93,7 @@ export const FUTURES_QUESTIONS: FutureQuestion[] = [
   },
   {
     id: "nfc_champ",
-    category: "award",
+    category: "championship",
     title: "NFC Champion",
     subtitle: "Which National Football Conference team wins the conference in 2026-2027?",
     points: 15,
@@ -238,72 +238,6 @@ export const FUTURES_QUESTIONS: FutureQuestion[] = [
       { value: "zac_taylor", label: "Zac Taylor" },
       { value: "other", label: "Other / Field" }
     ]
-  },
-
-  // 2. Division Winners (10 Points Each)
-  {
-    id: "div_afc_east",
-    category: "division",
-    title: "AFC East Champion",
-    subtitle: "Who wins the AFC East division title?",
-    points: 10,
-    options: NFL_TEAMS_ALL.filter(t => t.division === "AFC East").map(t => ({ value: t.value, label: t.label }))
-  },
-  {
-    id: "div_afc_north",
-    category: "division",
-    title: "AFC North Champion",
-    subtitle: "Who wins the AFC North division title?",
-    points: 10,
-    options: NFL_TEAMS_ALL.filter(t => t.division === "AFC North").map(t => ({ value: t.value, label: t.label }))
-  },
-  {
-    id: "div_afc_south",
-    category: "division",
-    title: "AFC South Champion",
-    subtitle: "Who wins the AFC South division title?",
-    points: 10,
-    options: NFL_TEAMS_ALL.filter(t => t.division === "AFC South").map(t => ({ value: t.value, label: t.label }))
-  },
-  {
-    id: "div_afc_west",
-    category: "division",
-    title: "AFC West Champion",
-    subtitle: "Who wins the AFC West division title?",
-    points: 10,
-    options: NFL_TEAMS_ALL.filter(t => t.division === "AFC West").map(t => ({ value: t.value, label: t.label }))
-  },
-  {
-    id: "div_nfc_east",
-    category: "division",
-    title: "NFC East Champion",
-    subtitle: "Who wins the NFC East division title?",
-    points: 10,
-    options: NFL_TEAMS_ALL.filter(t => t.division === "NFC East").map(t => ({ value: t.value, label: t.label }))
-  },
-  {
-    id: "div_nfc_north",
-    category: "division",
-    title: "NFC North Champion",
-    subtitle: "Who wins the NFC North division title?",
-    points: 10,
-    options: NFL_TEAMS_ALL.filter(t => t.division === "NFC North").map(t => ({ value: t.value, label: t.label }))
-  },
-  {
-    id: "div_nfc_south",
-    category: "division",
-    title: "NFC South Champion",
-    subtitle: "Who wins the NFC South division title?",
-    points: 10,
-    options: NFL_TEAMS_ALL.filter(t => t.division === "NFC South").map(t => ({ value: t.value, label: t.label }))
-  },
-  {
-    id: "div_nfc_west",
-    category: "division",
-    title: "NFC West Champion",
-    subtitle: "Who wins the NFC West division title?",
-    points: 10,
-    options: NFL_TEAMS_ALL.filter(t => t.division === "NFC West").map(t => ({ value: t.value, label: t.label }))
   },
 
   // 4. Division Standings Finish Predictor (20 Points Each, 5 points per exact slot)

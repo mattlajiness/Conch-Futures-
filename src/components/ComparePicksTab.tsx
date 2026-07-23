@@ -24,7 +24,7 @@ export default function ComparePicksTab({ pool, categoryFilter = "all", nflStand
 
   const filteredQuestions = categoryFilter === "all"
     ? activeQuestionsList
-    : activeQuestionsList.filter((q) => q.category === categoryFilter);
+    : activeQuestionsList.filter((q) => q.category === categoryFilter || (categoryFilter === "standings" && q.category === "over_under"));
 
   useEffect(() => {
     if (filteredQuestions.length > 0) {

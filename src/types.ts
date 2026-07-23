@@ -20,7 +20,7 @@ export interface Picks {
 
 export interface FutureQuestion {
   id: string;
-  category: "award" | "team" | "division" | "over_under" | "standings";
+  category: "award" | "team" | "division" | "over_under" | "standings" | "championship";
   title: string;
   subtitle: string;
   points: number;

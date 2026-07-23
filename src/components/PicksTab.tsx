@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { FUTURES_QUESTIONS, NFL_TEAMS_ALL } from "../constants";
-import { Save, Check, Award, Compass, ShieldAlert, Zap, ListOrdered } from "lucide-react";
+import { Save, Check, Award, Compass, ShieldAlert, Zap, ListOrdered, GripVertical, Trophy } from "lucide-react";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { db, OperationType, handleFirestoreError } from "../lib/firebase";
 import { Picks, Pool } from "../types";
@@ -18,6 +18,34 @@ interface PicksTabProps {
 export default function PicksTab({ pool, user, userPicks, onPicksSaved, categoryFilter = "all", nflStandings }: PicksTabProps) {
   const [selections, setSelections] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+
+  const [draggedItem, setDraggedItem] = useState<{ qId: string; index: number } | null>(null);
+
+  const handleDragStart = (e: React.DragEvent, qId: string, index: number) => {
+    setDraggedItem({ qId, index });
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  };
+
+  const handleDrop = (e: React.DragEvent, qId: string, targetIndex: number) => {
+    e.preventDefault();
+    if (!draggedItem || draggedItem.qId !== qId || draggedItem.index === targetIndex) return;
+
+    const currentOrder = getStandingOrder(qId);
+    const newOrder = [...currentOrder];
+    
+    // Remove dragged item and insert at target index
+    const [removed] = newOrder.splice(draggedItem.index, 1);
+    newOrder.splice(targetIndex, 0, removed);
+    
+    handleSelectOption(qId, newOrder.join(","));
+    setDraggedItem(null);
+  };
+
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   // Load existing picks if available
@@ -41,11 +69,18 @@ export default function PicksTab({ pool, user, userPicks, onPicksSaved, category
     setMessage(null);
 
     const path = `pools/${pool.id}/picks/${user.uid}`;
+    const selectionsToSave = { ...selections };
+    standingsQuestions.forEach(q => {
+      if (!selectionsToSave[q.id]) {
+        selectionsToSave[q.id] = q.options.map(o => o.value).join(",");
+      }
+    });
+
     const newPicks: Picks = {
       userId: user.uid,
       userDisplayName: user.displayName || "Player",
       userPhotoURL: user.photoURL || "",
-      selections,
+      selections: selectionsToSave,
       updatedAt: new Date(),
     };
 
@@ -54,7 +89,7 @@ export default function PicksTab({ pool, user, userPicks, onPicksSaved, category
         userId: user.uid,
         userDisplayName: user.displayName || "Player",
         userPhotoURL: user.photoURL || "",
-        selections,
+        selections: selectionsToSave,
         updatedAt: serverTimestamp(),
       });
 
@@ -76,15 +111,21 @@ export default function PicksTab({ pool, user, userPicks, onPicksSaved, category
 
   // Group questions by category
   const awardsQuestions = activeQuestionsList.filter((q) => q.category === "award");
+  const championshipQuestions = activeQuestionsList.filter((q) => q.category === "championship");
   const divisionQuestions = activeQuestionsList.filter((q) => q.category === "division");
   const ouQuestions = activeQuestionsList.filter((q) => q.category === "over_under");
   const standingsQuestions = activeQuestionsList.filter((q) => q.category === "standings");
 
   // Helper functions for Division Standings predictions
   const getStandingOrder = (qId: string): string[] => {
-    const value = selections[qId] || "";
-    const parts = value.split(",");
-    return [parts[0] || "", parts[1] || "", parts[2] || "", parts[3] || ""];
+    const q = activeQuestionsList.find(q => q.id === qId);
+    if (!q) return [];
+    const value = selections[qId];
+    if (value) {
+      const parts = value.split(",");
+      if (parts.length === q.options.length) return parts;
+    }
+    return q.options.map(o => o.value);
   };
 
   const handleSelectStandingSlot = (qId: string, slotIndex: number, teamValue: string) => {
@@ -183,7 +224,365 @@ export default function PicksTab({ pool, user, userPicks, onPicksSaved, category
         </div>
       </div>
 
-      {/* 1. SECTION: CHAMPIONSHIPS & AWARD FUTURES */}
+      
+      {(categoryFilter === "all" || categoryFilter === "standings") && standingsQuestions.length > 0 && (
+      <div>
+        <div className="flex items-center gap-3 border-b border-slate-700/50 pb-3 mb-6 mt-10">
+          <span className="p-1.5 bg-emerald-500/10 rounded border border-emerald-500/20">
+            <ListOrdered className="w-5 h-5 text-emerald-400" />
+          </span>
+          <h2 className="text-lg font-extrabold text-white uppercase tracking-wider">
+            NFL Division Standings Predictor
+          </h2>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {standingsQuestions.map((q) => {
+            const currentOrder = getStandingOrder(q.id);
+            const isFullyFilled = currentOrder.every((t) => t !== "");
+
+            return (
+              <div
+                key={q.id}
+                className="bg-slate-800/80 border border-slate-700/50 hover:border-slate-700 rounded-xl p-5 shadow-sm space-y-4"
+              >
+                <div>
+                  <div className="flex justify-between items-start gap-2">
+                    <h3 className="font-bold text-white text-base">{q.title}</h3>
+                    <span className="text-[10px] uppercase font-mono tracking-wider font-semibold text-emerald-400 bg-emerald-500/15 border border-emerald-500/20 px-2 py-0.5 rounded-full">
+                      +{q.points} PTS
+                    </span>
+                  </div>
+                  <p className="text-slate-400 text-xs mt-1 leading-normal">{q.subtitle}</p>
+                  
+                  {nflStandings && (
+                    <button
+                      type="button"
+                      onClick={() => fillWithLiveStandings(q.id, q.options)}
+                      className="mt-2.5 flex items-center gap-1 px-2 py-1 bg-teal-500/10 hover:bg-teal-500/20 text-teal-400 text-[9px] font-mono font-black rounded-md border border-teal-500/20 cursor-pointer transition-all uppercase"
+                    >
+                      <Zap className="w-2.5 h-2.5 animate-pulse text-amber-400 fill-amber-400" /> Use Current Standings
+                    </button>
+                  )}
+                </div>
+
+                <div className="space-y-2 relative">
+                  {[
+                    { label: "1st Place (Winner)", color: "text-amber-400", bgColor: "bg-amber-400/10", borderColor: "border-amber-500/20" },
+                    { label: "2nd Place", color: "text-slate-300", bgColor: "bg-slate-800", borderColor: "border-slate-700" },
+                    { label: "3rd Place", color: "text-slate-400", bgColor: "bg-slate-800/80", borderColor: "border-slate-700/80" },
+                    { label: "4th Place (Last)", color: "text-orange-500", bgColor: "bg-orange-500/5", borderColor: "border-orange-500/10" },
+                  ].map((slot, index) => {
+                    const selectedValue = currentOrder[index];
+                    const teamOption = q.options.find(o => o.value === selectedValue);
+                    const isDragging = draggedItem?.qId === q.id && draggedItem?.index === index;
+                    const ouQuestion = selectedValue ? ouQuestions.find(ouq => ouq.id === `ou_${selectedValue.toLowerCase()}`) : null;
+                    const currentOuSelection = ouQuestion ? selections[ouQuestion.id] : undefined;
+                    
+                    return (
+                      <div 
+                        key={selectedValue || index} 
+                        draggable
+                        onDragStart={(e) => handleDragStart(e, q.id, index)}
+                        onDragOver={(e) => handleDragOver(e, index)}
+                        onDrop={(e) => handleDrop(e, q.id, index)}
+                        className={`flex flex-col gap-2 ${slot.bgColor} p-3 rounded-lg border ${slot.borderColor} transition-all duration-200 cursor-grab active:cursor-grabbing ${isDragging ? 'opacity-40 scale-95' : 'opacity-100 hover:border-emerald-500/50'}`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="flex flex-col gap-0.5 w-32 shrink-0 pointer-events-none">
+                            <span className={`text-[10px] font-extrabold uppercase tracking-wider ${slot.color}`}>
+                              {slot.label}
+                            </span>
+                          </div>
+                          <div className="flex-1 flex items-center justify-between gap-3 bg-slate-950/50 rounded-md py-2 px-3 border border-slate-700/50">
+                             <div className="flex items-center gap-2 pointer-events-none">
+                              {selectedValue && NFL_TEAMS_ALL.some(t => t.value === selectedValue) && (
+                                <img src={`https://a.espncdn.com/i/teamlogos/nfl/500/${selectedValue.toLowerCase()}.png`} alt={selectedValue} className="w-5 h-5 object-contain" referrerPolicy="no-referrer" />
+                              )}
+                              <span className="text-sm font-bold text-white">
+                                {teamOption?.label || "-- Select Team --"}
+                              </span>
+                              {nflStandings?.[selectedValue] && (
+                                <span className="text-xs font-mono text-slate-400 ml-1">
+                                  ({nflStandings[selectedValue].overallRecord})
+                                </span>
+                              )}
+                            </div>
+                            <GripVertical className="w-4 h-4 text-slate-500 shrink-0 pointer-events-none" />
+                          </div>
+                        </div>
+                        {ouQuestion && (
+                          <div className="flex items-center justify-between border-t border-slate-700/50 pt-2 mt-1">
+                            <div className="text-xs text-slate-300 font-medium ml-[140px] hidden sm:block">
+                              Win Total: <span className="font-bold text-white">{ouQuestion.title.split("-")[1]?.trim().split(" ")[0] || "8.5"}</span>
+                            </div>
+                            <div className="text-xs text-slate-300 font-medium sm:hidden">
+                              Wins: <span className="font-bold text-white">{ouQuestion.title.split("-")[1]?.trim().split(" ")[0] || "8.5"}</span>
+                            </div>
+                            <div className="flex gap-2">
+                              {ouQuestion.options.map((opt) => {
+                                const isSelected = currentOuSelection === opt.value;
+                                return (
+                                  <button
+                                    type="button"
+                                    key={opt.value}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleSelectOption(ouQuestion.id, opt.value);
+                                    }}
+                                    className={`px-4 py-1.5 text-xs font-bold rounded-md cursor-pointer transition-colors ${
+                                      isSelected ? "bg-emerald-600 text-white shadow-sm" : "bg-slate-950 text-slate-400 hover:bg-slate-800 border border-slate-800"
+                                    }`}
+                                  >
+                                    {opt.label.split(" ")[0]}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {isFullyFilled ? (
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/5 border border-emerald-500/15 rounded-lg text-emerald-400 text-xs font-semibold">
+                    <Check className="w-3.5 h-3.5" /> Predicted finish: {currentOrder.map(t => q.options.find(o => o.value === t)?.label.split(" ").pop() || t).join(" > ")}
+                  </div>
+                ) : (
+                  <div className="text-[10px] text-slate-500 italic pl-1">
+                    Select a unique team for all 4 positions to complete this prediction.
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      )}
+
+      {/* 4. SECTION: DIVISION STANDINGS ORDER */}
+      {(categoryFilter === "all" || categoryFilter === "standings") && standingsQuestions.length > 0 && (
+      <div>
+        <div className="flex items-center gap-3 border-b border-slate-700/50 pb-3 mb-6 mt-10">
+          <span className="p-1.5 bg-emerald-500/10 rounded border border-emerald-500/20">
+            <ListOrdered className="w-5 h-5 text-emerald-400" />
+          </span>
+          <h2 className="text-lg font-extrabold text-white uppercase tracking-wider">
+            NFL Division Standings Predictor
+          </h2>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {standingsQuestions.map((q) => {
+            const currentOrder = getStandingOrder(q.id);
+            const isFullyFilled = currentOrder.every((t) => t !== "");
+
+            return (
+              <div
+                key={q.id}
+                className="bg-slate-800/80 border border-slate-700/50 hover:border-slate-700 rounded-xl p-5 shadow-sm space-y-4"
+              >
+                <div>
+                  <div className="flex justify-between items-start gap-2">
+                    <h3 className="font-bold text-white text-base">{q.title}</h3>
+                    <span className="text-[10px] uppercase font-mono tracking-wider font-semibold text-emerald-400 bg-emerald-500/15 border border-emerald-500/20 px-2 py-0.5 rounded-full">
+                      +{q.points} PTS
+                    </span>
+                  </div>
+                  <p className="text-slate-400 text-xs mt-1 leading-normal">{q.subtitle}</p>
+                  
+                  {nflStandings && (
+                    <button
+                      type="button"
+                      onClick={() => fillWithLiveStandings(q.id, q.options)}
+                      className="mt-2.5 flex items-center gap-1 px-2 py-1 bg-teal-500/10 hover:bg-teal-500/20 text-teal-400 text-[9px] font-mono font-black rounded-md border border-teal-500/20 cursor-pointer transition-all uppercase"
+                    >
+                      <Zap className="w-2.5 h-2.5 animate-pulse text-amber-400 fill-amber-400" /> Use Current Standings
+                    </button>
+                  )}
+                </div>
+
+                <div className="space-y-2 relative">
+                  {[
+                    { label: "1st Place (Winner)", color: "text-amber-400", bgColor: "bg-amber-400/10", borderColor: "border-amber-500/20" },
+                    { label: "2nd Place", color: "text-slate-300", bgColor: "bg-slate-800", borderColor: "border-slate-700" },
+                    { label: "3rd Place", color: "text-slate-400", bgColor: "bg-slate-800/80", borderColor: "border-slate-700/80" },
+                    { label: "4th Place (Last)", color: "text-orange-500", bgColor: "bg-orange-500/5", borderColor: "border-orange-500/10" },
+                  ].map((slot, index) => {
+                    const selectedValue = currentOrder[index];
+                    const teamOption = q.options.find(o => o.value === selectedValue);
+                    const isDragging = draggedItem?.qId === q.id && draggedItem?.index === index;
+                    const ouQuestion = selectedValue ? ouQuestions.find(ouq => ouq.id === `ou_${selectedValue.toLowerCase()}`) : null;
+                    const currentOuSelection = ouQuestion ? selections[ouQuestion.id] : undefined;
+                    
+                    return (
+                      <div 
+                        key={selectedValue || index} 
+                        draggable
+                        onDragStart={(e) => handleDragStart(e, q.id, index)}
+                        onDragOver={(e) => handleDragOver(e, index)}
+                        onDrop={(e) => handleDrop(e, q.id, index)}
+                        className={`flex flex-col gap-2 ${slot.bgColor} p-3 rounded-lg border ${slot.borderColor} transition-all duration-200 cursor-grab active:cursor-grabbing ${isDragging ? 'opacity-40 scale-95' : 'opacity-100 hover:border-emerald-500/50'}`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="flex flex-col gap-0.5 w-32 shrink-0 pointer-events-none">
+                            <span className={`text-[10px] font-extrabold uppercase tracking-wider ${slot.color}`}>
+                              {slot.label}
+                            </span>
+                          </div>
+                          <div className="flex-1 flex items-center justify-between gap-3 bg-slate-950/50 rounded-md py-2 px-3 border border-slate-700/50">
+                             <div className="flex items-center gap-2 pointer-events-none">
+                              {selectedValue && NFL_TEAMS_ALL.some(t => t.value === selectedValue) && (
+                                <img src={`https://a.espncdn.com/i/teamlogos/nfl/500/${selectedValue.toLowerCase()}.png`} alt={selectedValue} className="w-5 h-5 object-contain" referrerPolicy="no-referrer" />
+                              )}
+                              <span className="text-sm font-bold text-white">
+                                {teamOption?.label || "-- Select Team --"}
+                              </span>
+                              {nflStandings?.[selectedValue] && (
+                                <span className="text-xs font-mono text-slate-400 ml-1">
+                                  ({nflStandings[selectedValue].overallRecord})
+                                </span>
+                              )}
+                            </div>
+                            <GripVertical className="w-4 h-4 text-slate-500 shrink-0 pointer-events-none" />
+                          </div>
+                        </div>
+                        {ouQuestion && (
+                          <div className="flex items-center justify-between border-t border-slate-700/50 pt-2 mt-1">
+                            <div className="text-xs text-slate-300 font-medium ml-[140px] hidden sm:block">
+                              Win Total: <span className="font-bold text-white">{ouQuestion.title.split("-")[1]?.trim().split(" ")[0] || "8.5"}</span>
+                            </div>
+                            <div className="text-xs text-slate-300 font-medium sm:hidden">
+                              Wins: <span className="font-bold text-white">{ouQuestion.title.split("-")[1]?.trim().split(" ")[0] || "8.5"}</span>
+                            </div>
+                            <div className="flex gap-2">
+                              {ouQuestion.options.map((opt) => {
+                                const isSelected = currentOuSelection === opt.value;
+                                return (
+                                  <button
+                                    type="button"
+                                    key={opt.value}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleSelectOption(ouQuestion.id, opt.value);
+                                    }}
+                                    className={`px-4 py-1.5 text-xs font-bold rounded-md cursor-pointer transition-colors ${
+                                      isSelected ? "bg-emerald-600 text-white shadow-sm" : "bg-slate-950 text-slate-400 hover:bg-slate-800 border border-slate-800"
+                                    }`}
+                                  >
+                                    {opt.label.split(" ")[0]}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {isFullyFilled ? (
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/5 border border-emerald-500/15 rounded-lg text-emerald-400 text-xs font-semibold">
+                    <Check className="w-3.5 h-3.5" /> Predicted finish: {currentOrder.map(t => q.options.find(o => o.value === t)?.label.split(" ").pop() || t).join(" > ")}
+                  </div>
+                ) : (
+                  <div className="text-[10px] text-slate-500 italic pl-1">
+                    Select a unique team for all 4 positions to complete this prediction.
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      )}
+
+      
+
+{/* SECTION: CHAMPIONSHIPS */}
+      {(categoryFilter === "all" || categoryFilter === "championship") && (
+      <div>
+        <div className="flex items-center gap-3 border-b border-slate-700/50 pb-3 mb-6">
+          <span className="p-1.5 bg-emerald-500/10 rounded border border-emerald-500/20">
+            <Trophy className="w-5 h-5 text-emerald-400" />
+          </span>
+          <h2 className="text-lg font-extrabold text-white uppercase tracking-wider">
+            NFL Championships
+          </h2>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {championshipQuestions.map((q) => {
+            const currentSelection = selections[q.id];
+            return (
+              <div
+                key={q.id}
+                className="bg-slate-800/80 border border-slate-700/50 hover:border-slate-700 rounded-xl p-5 shadow-sm space-y-4"
+              >
+                <div>
+                  <div className="flex justify-between items-start gap-2">
+                    <h3 className="font-bold text-white text-base">{q.title}</h3>
+                    <span className="text-[10px] uppercase font-mono tracking-wider font-semibold text-emerald-400 bg-emerald-500/15 border border-emerald-500/20 px-2 py-0.5 rounded-full">
+                      +{q.points} PTS
+                    </span>
+                  </div>
+                  <p className="text-slate-400 text-xs mt-1 leading-normal">{q.subtitle}</p>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-[10px] uppercase font-semibold tracking-wider text-slate-500">
+                    Your Selection
+                  </label>
+                  
+                  <div className="flex items-center gap-3">
+                    {currentSelection && NFL_TEAMS_ALL.some(t => t.value === currentSelection) && (
+                      <div className="shrink-0 bg-slate-900 rounded border border-slate-700/50 p-1 flex items-center justify-center">
+                        <img src={`https://a.espncdn.com/i/teamlogos/nfl/500/${currentSelection.toLowerCase()}.png`} alt={currentSelection} className="w-6 h-6 object-contain" referrerPolicy="no-referrer" />
+                      </div>
+                    )}
+                    <div className="flex-1">
+                      <select
+                    value={currentSelection || ""}
+                    onChange={(e) => handleSelectOption(q.id, e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-700/80 rounded-lg px-3.5 py-2.5 text-white text-sm focus:outline-none focus:border-emerald-500 transition-colors font-medium cursor-pointer"
+                  >
+                    <option value="" disabled className="text-slate-600">
+                      -- Click to Predict --
+                    </option>
+                    {q.options.map((opt) => {
+                      const standing = nflStandings?.[opt.value];
+                      const label = standing ? `${opt.label} (${standing.overallRecord})` : opt.label;
+                      return (
+                        <option key={opt.value} value={opt.value} className="text-white bg-slate-900">
+                          {label}
+                        </option>
+                      );
+                    })}
+                  </select>
+                    </div>
+                  </div>
+
+                </div>
+
+                {currentSelection && (
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900/60 border border-emerald-500/20 rounded-lg text-emerald-400 text-xs font-semibold">
+                    <Check className="w-3.5 h-3.5" /> Selected:{" "}
+                    {q.options.find((o) => o.value === currentSelection)?.label}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      )}
+
+      
+
+{/* SECTION: PLAYER AWARDS */}
       {(categoryFilter === "all" || categoryFilter === "award") && (
       <div>
         <div className="flex items-center gap-3 border-b border-slate-700/50 pb-3 mb-6">
@@ -191,7 +590,7 @@ export default function PicksTab({ pool, user, userPicks, onPicksSaved, category
             <Award className="w-5 h-5 text-emerald-400" />
           </span>
           <h2 className="text-lg font-extrabold text-white uppercase tracking-wider">
-            NFL Championships & Major Awards
+            NFL Major Awards
           </h2>
         </div>
 
@@ -261,244 +660,9 @@ export default function PicksTab({ pool, user, userPicks, onPicksSaved, category
       </div>
       )}
 
-      {/* 2. SECTION: DIVISION CHAMPIONS */}
-      {(categoryFilter === "all" || categoryFilter === "division") && (
-      <div>
-        <div className="flex items-center gap-3 border-b border-slate-700/50 pb-3 mb-6 mt-10">
-          <span className="p-1.5 bg-emerald-500/10 rounded border border-emerald-500/20">
-            <Compass className="w-5 h-5 text-emerald-400" />
-          </span>
-          <h2 className="text-lg font-extrabold text-white uppercase tracking-wider">
-            NFL Division Winners
-          </h2>
-        </div>
+      
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {divisionQuestions.map((q) => {
-            const currentSelection = selections[q.id];
-            return (
-              <div
-                key={q.id}
-                className="bg-slate-800/80 border border-slate-700/50 hover:border-slate-700 rounded-xl p-4 shadow-sm flex flex-col justify-between"
-              >
-                <div>
-                  <div className="flex justify-between items-center gap-2 mb-1">
-                    <h3 className="font-bold text-white text-xs tracking-tight">{q.title}</h3>
-                    <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded">
-                      +10P
-                    </span>
-                  </div>
-                  <p className="text-slate-400 text-[10px] leading-snug mb-3">Choose the winner</p>
-                </div>
-
-                <div className="space-y-2 mt-auto">
-                  <div className="flex items-center gap-2">
-                    {currentSelection && NFL_TEAMS_ALL.some(t => t.value === currentSelection) && (
-                      <div className="shrink-0 bg-slate-900 rounded border border-slate-700/50 p-1 flex items-center justify-center">
-                        <img src={`https://a.espncdn.com/i/teamlogos/nfl/500/${currentSelection.toLowerCase()}.png`} alt={currentSelection} className="w-5 h-5 object-contain" referrerPolicy="no-referrer" />
-                      </div>
-                    )}
-                    <div className="flex-1">
-                      <select
-                        value={currentSelection || ""}
-                        onChange={(e) => handleSelectOption(q.id, e.target.value)}
-                        className="w-full bg-slate-900 border border-slate-700/80 rounded-lg px-2 py-2 text-white text-xs focus:outline-none focus:border-emerald-500 transition-colors cursor-pointer"
-                      >
-                        <option value="" disabled className="text-slate-600">
-                          -- Choose Team --
-                        </option>
-                        {q.options.map((opt) => {
-                          const standing = nflStandings?.[opt.value];
-                          const label = standing ? `${opt.label} (${standing.overallRecord})` : opt.label;
-                          return (
-                            <option key={opt.value} value={opt.value} className="text-white bg-slate-900">
-                              {label}
-                            </option>
-                          );
-                        })}
-                      </select>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-      )}
-
-      {/* 4. SECTION: DIVISION STANDINGS ORDER */}
-      {(categoryFilter === "all" || categoryFilter === "standings") && standingsQuestions.length > 0 && (
-      <div>
-        <div className="flex items-center gap-3 border-b border-slate-700/50 pb-3 mb-6 mt-10">
-          <span className="p-1.5 bg-emerald-500/10 rounded border border-emerald-500/20">
-            <ListOrdered className="w-5 h-5 text-emerald-400" />
-          </span>
-          <h2 className="text-lg font-extrabold text-white uppercase tracking-wider">
-            NFL Division Standings Predictor
-          </h2>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {standingsQuestions.map((q) => {
-            const currentOrder = getStandingOrder(q.id);
-            const isFullyFilled = currentOrder.every((t) => t !== "");
-
-            return (
-              <div
-                key={q.id}
-                className="bg-slate-800/80 border border-slate-700/50 hover:border-slate-700 rounded-xl p-5 shadow-sm space-y-4"
-              >
-                <div>
-                  <div className="flex justify-between items-start gap-2">
-                    <h3 className="font-bold text-white text-base">{q.title}</h3>
-                    <span className="text-[10px] uppercase font-mono tracking-wider font-semibold text-emerald-400 bg-emerald-500/15 border border-emerald-500/20 px-2 py-0.5 rounded-full">
-                      +{q.points} PTS
-                    </span>
-                  </div>
-                  <p className="text-slate-400 text-xs mt-1 leading-normal">{q.subtitle}</p>
-                  
-                  {nflStandings && (
-                    <button
-                      type="button"
-                      onClick={() => fillWithLiveStandings(q.id, q.options)}
-                      className="mt-2.5 flex items-center gap-1 px-2 py-1 bg-teal-500/10 hover:bg-teal-500/20 text-teal-400 text-[9px] font-mono font-black rounded-md border border-teal-500/20 cursor-pointer transition-all uppercase"
-                    >
-                      <Zap className="w-2.5 h-2.5 animate-pulse text-amber-400 fill-amber-400" /> Use Current Standings
-                    </button>
-                  )}
-                </div>
-
-                <div className="space-y-3">
-                  {[
-                    { label: "1st Place (Winner)", color: "text-amber-400" },
-                    { label: "2nd Place", color: "text-slate-300" },
-                    { label: "3rd Place", color: "text-slate-400" },
-                    { label: "4th Place (Last)", color: "text-orange-500" },
-                  ].map((slot, index) => {
-                    const selectedValue = currentOrder[index];
-                    return (
-                      <div key={index} className="flex items-center gap-3 bg-slate-900/60 p-2 rounded-lg border border-slate-800">
-                        <span className={`w-32 text-[10px] font-extrabold uppercase tracking-wider ${slot.color}`}>
-                          {slot.label}
-                        </span>
-                        <div className="flex-1 flex items-center gap-2">
-                            {selectedValue && NFL_TEAMS_ALL.some(t => t.value === selectedValue) && (
-                              <img src={`https://a.espncdn.com/i/teamlogos/nfl/500/${selectedValue.toLowerCase()}.png`} alt={selectedValue} className="w-4 h-4 object-contain" referrerPolicy="no-referrer" />
-                            )}
-                            <select
-                              value={selectedValue}
-                              onChange={(e) => handleSelectStandingSlot(q.id, index, e.target.value)}
-                              className="flex-1 bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer font-semibold min-w-0"
-                            >
-                              <option value="">-- Select Team --</option>
-                              {q.options.map((opt) => {
-                                const isSelectedElsewhere = currentOrder.some((t, i) => i !== index && t === opt.value);
-                                const standing = nflStandings?.[opt.value];
-                                const label = standing ? `${opt.label} (${standing.overallRecord})` : opt.label;
-                                return (
-                                  <option key={opt.value} value={opt.value} disabled={isSelectedElsewhere} className={isSelectedElsewhere ? "text-slate-600" : "text-white"}>
-                                    {label}
-                                  </option>
-                                );
-                              })}
-                            </select>
-                          </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {isFullyFilled ? (
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/5 border border-emerald-500/15 rounded-lg text-emerald-400 text-xs font-semibold">
-                    <Check className="w-3.5 h-3.5" /> Predicted finish: {currentOrder.map(t => q.options.find(o => o.value === t)?.label.split(" ").pop() || t).join(" > ")}
-                  </div>
-                ) : (
-                  <div className="text-[10px] text-slate-500 italic pl-1">
-                    Select a unique team for all 4 positions to complete this prediction.
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-      )}
-
-      {/* 3. SECTION: OVER / UNDER WIN TOTALS */}
-      {(categoryFilter === "all" || categoryFilter === "over_under") && (
-      <div>
-        <div className="flex items-center gap-3 border-b border-slate-700/50 pb-3 mb-6 mt-10">
-          <span className="p-1.5 bg-emerald-500/10 rounded border border-emerald-500/20">
-            <ShieldAlert className="w-5 h-5 text-emerald-400" />
-          </span>
-          <h2 className="text-lg font-extrabold text-white uppercase tracking-wider">
-            Win Total Over/Unders
-          </h2>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {["AFC East", "AFC North", "AFC South", "AFC West", "NFC East", "NFC North", "NFC South", "NFC West"].map((division) => {
-            const divisionTeams = NFL_TEAMS_ALL.filter(t => t.division === division);
-            const divisionQuestions = divisionTeams.map(t => ouQuestions.find(q => q.id === `ou_${t.value.toLowerCase()}`)).filter(Boolean) as typeof ouQuestions;
-            
-            if (divisionQuestions.length === 0) return null;
-
-            return (
-              <div key={division} className="bg-slate-800/80 border border-slate-700/50 rounded-xl overflow-hidden shadow-sm flex flex-col">
-                <div className="bg-slate-900/60 px-3 py-2 border-b border-slate-700/50 text-center">
-                  <h3 className="font-bold text-slate-300 text-xs uppercase tracking-wider">{division}</h3>
-                </div>
-                <div className="flex flex-col divide-y divide-slate-700/50">
-                  {divisionQuestions.map((q) => {
-                    const currentSelection = selections[q.id];
-                    const teamCode = q.id.replace("ou_", "").toUpperCase();
-                    const teamStanding = nflStandings?.[teamCode];
-                    const line = q.title.split("-")[1]?.trim().split(" ")[0] || "8.5";
-                    const teamName = q.title.split("-")[0]?.trim() || q.title;
-                    return (
-                      <div
-                        key={q.id}
-                        className="p-3 flex flex-col gap-2 hover:bg-slate-800/40 transition-colors"
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <img src={`https://a.espncdn.com/i/teamlogos/nfl/500/${teamCode.toLowerCase()}.png`} alt={teamName} className="w-5 h-5 object-contain" referrerPolicy="no-referrer" />
-                            <h3 className="font-bold text-white text-xs">{teamName}</h3>
-                          </div>
-                          <span className="text-[10px] font-semibold text-slate-300 bg-slate-900/80 px-1.5 py-0.5 rounded border border-slate-700">
-                            {line}
-                          </span>
-                        </div>
-                        <div className="grid grid-cols-2 gap-1.5">
-                          {q.options.map((opt) => {
-                            const isSelected = currentSelection === opt.value;
-                            return (
-                              <button
-                                key={opt.value}
-                                onClick={() => handleSelectOption(q.id, opt.value)}
-                                className={`py-1.5 rounded-md text-[10px] font-bold transition-all duration-150 cursor-pointer text-center ${
-                                  isSelected
-                                    ? "bg-emerald-600 text-white shadow"
-                                    : "bg-slate-900 border border-slate-700 text-slate-400 hover:text-slate-200 hover:bg-slate-800"
-                                }`}
-                              >
-                                {opt.value}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-      )}
-      {/* Sticky footer Save helper */}
+{/* Sticky footer Save helper */}
       <div className="bg-slate-800/60 rounded-xl border border-slate-700/40 p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-slate-400 text-xs">
         <p>Make sure to press &quot;Lock In Picks&quot; above to submit or update your answers securely.</p>
         <button

@@ -299,10 +299,9 @@ export default function PoolDetail({ pool: initialPool, user, onBack }: PoolDeta
         <div className="flex flex-wrap gap-1.5 w-full sm:w-auto">
           {[
             { id: "all", label: "All Categories" },
-            { id: "award", label: "MVP & Awards" },
-            { id: "division", label: "Division Winners" },
-            { id: "over_under", label: "Over/Unders" },
-            { id: "standings", label: "Standings Predictions" },
+            { id: "standings", label: "Divisions & O/U" },
+            { id: "championship", label: "Championships" },
+            { id: "award", label: "Player Awards" },
           ].map((cat) => (
             <button
               key={cat.id}

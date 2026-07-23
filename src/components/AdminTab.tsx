@@ -14,7 +14,8 @@ import {
   CheckSquare,
   Square,
   Trash2,
-  RefreshCw
+  RefreshCw,
+  Trophy
 } from "lucide-react";
 import { doc, updateDoc } from "firebase/firestore";
 import { db, OperationType, handleFirestoreError } from "../lib/firebase";
@@ -243,6 +244,7 @@ export default function AdminTab({ pool, onPoolUpdated, categoryFilter = "all", 
 
   // Group questions
   const awardsQuestions = FUTURES_QUESTIONS.filter((q) => q.category === "award");
+  const championshipQuestions = FUTURES_QUESTIONS.filter((q) => q.category === "championship");
   const divisionQuestions = FUTURES_QUESTIONS.filter((q) => q.category === "division");
   const ouQuestions = FUTURES_QUESTIONS.filter((q) => q.category === "over_under");
   const standingsQuestions = FUTURES_QUESTIONS.filter((q) => q.category === "standings");
@@ -564,92 +566,7 @@ export default function AdminTab({ pool, onPoolUpdated, categoryFilter = "all", 
 
           {/* Categories for grading */}
           
-          {/* Awards category */}
-          {(categoryFilter === "all" || categoryFilter === "award") && awardsQuestions.some(q => activeQuestions.includes(q.id)) && (
-            <div className="space-y-4">
-              <h3 className="text-sm font-extrabold uppercase tracking-widest text-amber-400 flex items-center gap-2 pb-1 border-b border-slate-800">
-                <Award className="w-4 h-4" /> Major Award Winners
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {awardsQuestions.filter(q => activeQuestions.includes(q.id)).map((q) => {
-                  const currentWinner = results[q.id];
-                  return (
-                    <div key={q.id} className="bg-slate-800/80 border border-slate-700/50 rounded-xl p-5 flex flex-col justify-between gap-4">
-                      <div>
-                        <h4 className="font-bold text-white text-sm">{q.title}</h4>
-                        <p className="text-slate-400 text-[10px] mt-0.5">{q.subtitle}</p>
-                      </div>
-                      <div className="flex gap-2 items-center">
-                        <select
-                          value={currentWinner || ""}
-                          onChange={(e) => handleSelectWinner(q.id, e.target.value)}
-                          className="flex-grow bg-slate-900 border border-slate-700/80 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-amber-500 transition-colors cursor-pointer font-semibold"
-                        >
-                          <option value="">-- No Winner Decided --</option>
-                          {q.options.map((opt) => (
-                            <option key={opt.value} value={opt.value}>
-                              {opt.label}
-                            </option>
-                          ))}
-                        </select>
-                        {currentWinner && (
-                          <button
-                            onClick={() => handleClearWinner(q.id)}
-                            className="p-2 text-xs font-semibold text-rose-400 hover:text-rose-300 bg-rose-500/10 border border-rose-500/20 rounded-lg transition-colors cursor-pointer"
-                          >
-                            Clear
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Division Champions Category */}
-          {(categoryFilter === "all" || categoryFilter === "division") && divisionQuestions.some(q => activeQuestions.includes(q.id)) && (
-            <div className="space-y-4 pt-4">
-              <h3 className="text-sm font-extrabold uppercase tracking-widest text-amber-400 flex items-center gap-2 pb-1 border-b border-slate-800">
-                <Compass className="w-4 h-4" /> Division Champions
-              </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {divisionQuestions.filter(q => activeQuestions.includes(q.id)).map((q) => {
-                  const currentWinner = results[q.id];
-                  return (
-                    <div key={q.id} className="bg-slate-800/80 border border-slate-700/50 rounded-xl p-4 flex flex-col justify-between gap-3">
-                      <h4 className="font-bold text-white text-xs leading-tight">{q.title}</h4>
-                      <div className="flex flex-col gap-1.5">
-                        <select
-                          value={currentWinner || ""}
-                          onChange={(e) => handleSelectWinner(q.id, e.target.value)}
-                          className="w-full bg-slate-900 border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-white text-xs focus:outline-none focus:border-amber-500 transition-colors cursor-pointer font-semibold"
-                        >
-                          <option value="">-- Winner --</option>
-                          {q.options.map((opt) => (
-                            <option key={opt.value} value={opt.value}>
-                              {opt.label}
-                            </option>
-                          ))}
-                        </select>
-                        {currentWinner && (
-                          <button
-                            onClick={() => handleClearWinner(q.id)}
-                            className="text-[10px] text-rose-400 text-left hover:underline"
-                          >
-                            Clear Result
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Division Standings Category */}
+          
           {(categoryFilter === "all" || categoryFilter === "standings") && standingsQuestions.some(q => activeQuestions.includes(q.id)) && (
             <div className="space-y-4 pt-4">
               <h3 className="text-sm font-extrabold uppercase tracking-widest text-amber-400 flex items-center gap-2 pb-1 border-b border-slate-800">

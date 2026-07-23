@@ -352,7 +352,7 @@ export default function StandingsTab({ pool, user, userPicks, categoryFilter = "
             </div>
 
             <div className="space-y-3.5 animate-fadeIn">
-              {activeQuestionsList.filter((q) => categoryFilter === "all" || q.category === categoryFilter).map((q) => {
+              {activeQuestionsList.filter((q) => categoryFilter === "all" || q.category === categoryFilter || (categoryFilter === "standings" && q.category === "over_under")).map((q) => {
                 const userPick = selectedUser.picks[q.id];
                 let officialWinner = pool.results?.[q.id];
                 let isDynamic = false;

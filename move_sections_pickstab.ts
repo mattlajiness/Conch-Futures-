@@ -1,22 +1,43 @@
-import fs from 'fs';
+import * as fs from 'fs';
 
-const content = fs.readFileSync('src/components/PicksTab.tsx', 'utf-8');
+let content = fs.readFileSync('src/components/PicksTab.tsx', 'utf-8');
 
-const s2 = content.indexOf('{/* 2. SECTION: DIVISION CHAMPIONS */}');
-const s3 = content.indexOf('{/* 3. SECTION: OVER / UNDER WIN TOTALS */}');
-const s4 = content.indexOf('{/* 4. SECTION: DIVISION STANDINGS ORDER */}');
-const sEnd = content.indexOf('</div>\n    </div>\n  );\n}');
+const awardSectionRegex = /\{\/\* 1\. SECTION: CHAMPIONSHIPS & AWARD FUTURES \*\/\}.*?\{\/\* 4\. SECTION: DIVISION STANDINGS ORDER \*\/\}/s;
+const awardSectionMatch = content.match(awardSectionRegex);
+if (!awardSectionMatch) throw new Error("Could not find section 1");
 
-if (s2 !== -1 && s3 !== -1 && s4 !== -1 && sEnd !== -1) {
-  const p1 = content.slice(0, s3);
-  const p2 = content.slice(s3, s4); // over under
-  const p3 = content.slice(s4, sEnd); // standings
-  const pEnd = content.slice(sEnd);
+let awardSection = awardSectionMatch[0].replace('{/* 4. SECTION: DIVISION STANDINGS ORDER */}', '');
 
-  // new order: ..., p1, p3 (standings), p2 (over under), pEnd
-  const newContent = p1 + p3 + p2 + pEnd;
-  fs.writeFileSync('src/components/PicksTab.tsx', newContent);
-  console.log("Success PicksTab");
-} else {
-  console.log("Failed", s2, s3, s4, sEnd);
+// Create championships section from award section
+let champSection = awardSection.replace('1. SECTION: CHAMPIONSHIPS & AWARD FUTURES', 'SECTION: CHAMPIONSHIPS');
+champSection = champSection.replace('categoryFilter === "award"', 'categoryFilter === "championship"');
+champSection = champSection.replace('NFL Championships & Major Awards', 'NFL Championships');
+champSection = champSection.replace('awardsQuestions.map', 'championshipQuestions.map');
+champSection = champSection.replace('Award className', 'Trophy className'); // Let's use Trophy
+
+// Create new award section from award section
+let newAwardSection = awardSection.replace('1. SECTION: CHAMPIONSHIPS & AWARD FUTURES', 'SECTION: PLAYER AWARDS');
+newAwardSection = newAwardSection.replace('NFL Championships & Major Awards', 'NFL Major Awards');
+
+const standingsSectionRegex = /\{\/\* 4\. SECTION: DIVISION STANDINGS ORDER \*\/\}.*?\{\/\* Sticky footer Save helper \*\/\}/s;
+const standingsSectionMatch = content.match(standingsSectionRegex);
+if (!standingsSectionMatch) throw new Error("Could not find section 4");
+
+let standingsSection = standingsSectionMatch[0].replace('{/* Sticky footer Save helper */}', '');
+
+// Order should be: Standings, then Championships, then Awards
+let newContent = content.replace(awardSectionRegex, '');
+newContent = newContent.replace(standingsSectionRegex, '{/* Sticky footer Save helper */}');
+
+const injectionPoint = '{/* Sticky footer Save helper */}';
+const sectionsToInject = standingsSection + '\n\n' + champSection + '\n\n' + newAwardSection + '\n\n' + injectionPoint;
+
+newContent = newContent.replace(injectionPoint, sectionsToInject);
+
+// Make sure we import Trophy
+if (!newContent.includes('Trophy,')) {
+    newContent = newContent.replace('import { Save, Check, Award, Compass, ShieldAlert, Zap, ListOrdered, GripVertical }', 'import { Save, Check, Award, Compass, ShieldAlert, Zap, ListOrdered, GripVertical, Trophy }');
 }
+
+fs.writeFileSync('src/components/PicksTab.tsx', newContent);
+console.log("Done");
