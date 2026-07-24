@@ -34,7 +34,8 @@ service cloud.firestore {
              && picks.userId is string && picks.userId.size() <= 128
              && picks.userDisplayName is string && picks.userDisplayName.size() <= 100
              && picks.selections is map
-             && (!picks.keys().hasAny(['userPhotoURL']) || (picks.userPhotoURL is string && picks.userPhotoURL.size() <= 1000));
+             && (!picks.keys().hasAny(['userPhotoURL']) || (picks.userPhotoURL is string && picks.userPhotoURL.size() <= 1000))
+             && (!picks.keys().hasAny(['tiebreaker']) || (picks.tiebreaker is string && picks.tiebreaker.size() <= 20));
     }
 
     // Pools Collection Rules
@@ -80,7 +81,7 @@ service cloud.firestore {
                       && request.auth.uid == resource.data.userId
                       && request.resource.data.userId == resource.data.userId
                       && request.resource.data.updatedAt == request.time
-                      && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['selections', 'userDisplayName', 'userPhotoURL', 'updatedAt']);
+                      && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['selections', 'userDisplayName', 'userPhotoURL', 'updatedAt', 'tiebreaker']);
 
         allow delete: if isSignedIn()
                       && userId == request.auth.uid;

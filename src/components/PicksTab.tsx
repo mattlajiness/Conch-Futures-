@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import { FUTURES_QUESTIONS, NFL_TEAMS_ALL, AFC_TEAMS, NFC_TEAMS, NFL_WIN_TOTALS } from "../constants";
-import { Save, Check, Award, Compass, ShieldAlert, Zap, ListOrdered, GripVertical, Trophy, ChevronRight, ChevronLeft } from "lucide-react";
+import { Save, Check, Award, Compass, ShieldAlert, Zap, ListOrdered, GripVertical, Trophy, ChevronRight, ChevronLeft, ChevronUp, ChevronDown } from "lucide-react";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { CheckCircle2, Loader2 } from "lucide-react";
 import { db, OperationType, handleFirestoreError } from "../lib/firebase";
 import { Picks, Pool } from "../types";
 import { TeamStandingInfo } from "../lib/nflApi";
@@ -36,12 +37,34 @@ export default function PicksTab({ pool, user, userPicks, onPicksSaved, nflStand
   const [saving, setSaving] = useState(false);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [autosaving, setAutosaving] = useState(false);
+  const [lastAutosaveTime, setLastAutosaveTime] = useState<Date | null>(null);
+  const autosaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isFirstLoad = useRef(true);
 
   const getPoints = (qId: string, defaultPoints: number) => {
     return pool.customPoints?.[qId] !== undefined ? pool.customPoints[qId] : defaultPoints;
   };
 
   const [draggedItem, setDraggedItem] = useState<{ qId: string; index: number } | null>(null);
+
+  
+  const handleMove = (qId: string, index: number, direction: 'up' | 'down') => {
+    const currentOrder = getStandingOrder(qId);
+    if (direction === 'up' && index === 0) return;
+    if (direction === 'down' && index === currentOrder.length - 1) return;
+    
+    const newOrder = [...currentOrder];
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    
+    // Swap
+    const temp = newOrder[index];
+    newOrder[index] = newOrder[targetIndex];
+    newOrder[targetIndex] = temp;
+    
+    handleSelectOption(qId, newOrder.join(","));
+  };
+
 
   const handleDragStart = (e: React.DragEvent, qId: string, index: number) => {
     setDraggedItem({ qId, index });
@@ -76,6 +99,65 @@ export default function PicksTab({ pool, user, userPicks, onPicksSaved, nflStand
       setSelections({});
     }
   }, [userPicks]);
+
+  
+  useEffect(() => {
+    if (isFirstLoad.current) {
+      isFirstLoad.current = false;
+      return;
+    }
+    
+    // Don't auto-save if everything is empty
+    if (Object.keys(selections).length === 0 && !tiebreaker) return;
+
+    if (autosaveTimeoutRef.current) {
+      clearTimeout(autosaveTimeoutRef.current);
+    }
+
+    autosaveTimeoutRef.current = setTimeout(async () => {
+      setAutosaving(true);
+      const path = `pools/${pool.id}/picks/${user.uid}`;
+      const selectionsToSave = { ...selections };
+
+      standingsQuestions.forEach(q => {
+        if (!selectionsToSave[q.id]) {
+          selectionsToSave[q.id] = q.options.map(o => o.value).join(",");
+        }
+      });
+
+      const newPicks: Picks = {
+        userId: user.uid,
+        userDisplayName: user.displayName || "Player",
+        userPhotoURL: user.photoURL || "",
+        selections: selectionsToSave,
+        tiebreaker,
+        updatedAt: new Date(),
+      };
+
+      try {
+        await setDoc(doc(db, path), {
+          userId: user.uid,
+          userDisplayName: user.displayName || "Player",
+          userPhotoURL: user.photoURL || "",
+          selections: selectionsToSave,
+          tiebreaker,
+          updatedAt: serverTimestamp(),
+        });
+        setLastAutosaveTime(new Date());
+        onPicksSaved(newPicks);
+      } catch (err: any) {
+        console.error("Autosave error", err);
+      } finally {
+        setAutosaving(false);
+      }
+    }, 1500);
+
+    return () => {
+      if (autosaveTimeoutRef.current) {
+        clearTimeout(autosaveTimeoutRef.current);
+      }
+    };
+  }, [selections, tiebreaker]);
 
   const handleSelectOption = (questionId: string, value: string) => {
     setSelections((prev) => ({
@@ -254,25 +336,29 @@ export default function PicksTab({ pool, user, userPicks, onPicksSaved, nflStand
                                   <div className="w-8 h-8 flex items-center justify-center shrink-0">
                                     <img src={`https://a.espncdn.com/i/teamlogos/nfl/500/${teamVal.toLowerCase()}.png`} alt={teamLabel} className="w-8 h-8 object-contain" referrerPolicy="no-referrer" />
                                   </div>
-                                  <div className="flex-1 flex flex-row justify-between items-center pr-1 sm:pr-2 gap-1 sm:gap-2">
+                                  <div className="flex-1 flex flex-row justify-between items-center pr-1 sm:pr-2 gap-2 min-w-0">
                                     <span className="font-bold text-slate-200 text-sm sm:text-base truncate mr-1">{teamLabel}</span>
-                                    <div className="flex items-center justify-end gap-1 sm:gap-2 bg-slate-900/80 rounded-md p-1 border border-slate-700/50 shrink-0" onPointerDown={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}>
-                                      <span className="text-[10px] text-slate-400 font-mono px-1 whitespace-nowrap">O/U {NFL_WIN_TOTALS[teamVal] || 8.5}</span>
-                                      <div className="flex gap-1">
+                                    <div className="flex items-center justify-end gap-1.5 sm:gap-2 bg-slate-900/80 rounded-md p-1 border border-slate-700/50 shrink-0" onPointerDown={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}>
+                                      <span className="text-[11px] sm:text-[10px] text-slate-400 font-mono px-1 whitespace-nowrap font-bold">{NFL_WIN_TOTALS[teamVal] || 8.5}</span>
+                                      <div className="flex gap-1 shrink-0">
                                         <button 
                                           type="button"
                                           onClick={(e) => { e.stopPropagation(); handleSelectOption(`ou_${teamVal.toLowerCase()}`, 'over'); }}
-                                          className={`px-2 py-0.5 rounded text-[10px] font-bold transition-colors ${selections[`ou_${teamVal.toLowerCase()}`] === 'over' ? 'bg-emerald-500 text-white shadow-[0_0_10px_rgba(16,185,129,0.3)]' : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white'}`}
+                                          className={`px-3 sm:px-2 py-1 sm:py-0.5 rounded text-[10px] sm:text-[10px] font-bold transition-colors ${selections[`ou_${teamVal.toLowerCase()}`] === 'over' ? 'bg-emerald-500 text-white shadow-[0_0_10px_rgba(16,185,129,0.3)]' : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white'}`}
                                         >O</button>
                                         <button 
                                           type="button"
                                           onClick={(e) => { e.stopPropagation(); handleSelectOption(`ou_${teamVal.toLowerCase()}`, 'under'); }}
-                                          className={`px-2 py-0.5 rounded text-[10px] font-bold transition-colors ${selections[`ou_${teamVal.toLowerCase()}`] === 'under' ? 'bg-rose-500 text-white shadow-[0_0_10px_rgba(244,63,94,0.3)]' : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white'}`}
+                                          className={`px-3 sm:px-2 py-1 sm:py-0.5 rounded text-[10px] sm:text-[10px] font-bold transition-colors ${selections[`ou_${teamVal.toLowerCase()}`] === 'under' ? 'bg-rose-500 text-white shadow-[0_0_10px_rgba(244,63,94,0.3)]' : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white'}`}
                                         >U</button>
                                       </div>
                                     </div>
                                   </div>
-                                  <GripVertical className="w-5 h-5 text-slate-600 shrink-0" />
+                                  <GripVertical className="w-5 h-5 text-slate-600 shrink-0 hidden sm:block" />
+                                  <div className="flex flex-col gap-0 sm:hidden shrink-0 border-l border-slate-700 pl-1">
+                                     <button type="button" onClick={(e) => { e.stopPropagation(); handleMove(q.id, index, 'up'); }} disabled={index === 0} className="p-1 text-slate-400 disabled:opacity-20 active:bg-slate-800 rounded"><ChevronUp className="w-5 h-5" /></button>
+                                     <button type="button" onClick={(e) => { e.stopPropagation(); handleMove(q.id, index, 'down'); }} disabled={index === 3} className="p-1 text-slate-400 disabled:opacity-20 active:bg-slate-800 rounded"><ChevronDown className="w-5 h-5" /></button>
+                                  </div>
                                 </>
                               ) : (
                                 <div className="flex-1 flex justify-between items-center text-slate-600 text-sm italic">
@@ -604,8 +690,17 @@ export default function PicksTab({ pool, user, userPicks, onPicksSaved, nflStand
         )}
       </div>
 
+      
       {/* Navigation Buttons */}
       <div className="mt-8 pt-6 border-t border-slate-800 flex justify-between items-center sticky bottom-0 bg-[#09222c] pb-2 z-20">
+        <div className="absolute -top-6 right-2 flex items-center gap-1.5 text-xs">
+          {autosaving ? (
+            <span className="text-slate-400 flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> Saving...</span>
+          ) : lastAutosaveTime ? (
+            <span className="text-emerald-500 flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Saved</span>
+          ) : null}
+        </div>
+
         <button
           onClick={() => setCurrentStepIndex(prev => Math.max(0, prev - 1))}
           disabled={currentStepIndex === 0}
