@@ -42,6 +42,39 @@ export default function PicksTab({ pool, user, userPicks, onPicksSaved, nflStand
   const autosaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isFirstLoad = useRef(true);
 
+  const activeQuestionsList = FUTURES_QUESTIONS;
+  const standingsQuestions = activeQuestionsList.filter((q) => q.category === "standings");
+  const awardsQuestions = activeQuestionsList.filter((q) => q.category === "award");
+  const ouQuestions = activeQuestionsList.filter((q) => q.category === "over_under");
+
+  const getStandingOrder = (qId: string, sels = selections): string[] => {
+    const q = activeQuestionsList.find(q => q.id === qId);
+    if (!q) return [];
+    const val = sels[qId];
+    if (val) return val.split(",");
+    return q.options.map((o) => "");
+  };
+  
+  const isStepComplete = (step: any, sels = selections, tbreak = tiebreaker) => {
+    if (step.category === 'standings') {
+      const q = activeQuestionsList.find(q => q.id === step.id);
+      if (!q) return false;
+      const order = getStandingOrder(q.id, sels);
+      const isStandingsFilled = order.every(t => t !== "");
+      const isOuFilled = q.options.every(opt => !!sels[`ou_${opt.value.toLowerCase()}`]);
+      return isStandingsFilled && isOuFilled;
+    } else if (step.category === 'championship') {
+       return !!sels['afc_champ'] && !!sels['nfc_champ'] && !!sels['super_bowl'];
+    } else if (step.category === 'award') {
+       const awardQs = activeQuestionsList.filter(q => q.category === 'award');
+       return awardQs.every(q => !!sels[q.id]);
+    } else if (step.category === 'submit') {
+       return tbreak !== "" && Object.values(sels).filter(Boolean).length === activeQuestionsList.length;
+    }
+    return false;
+  };
+
+
   const getPoints = (qId: string, defaultPoints: number) => {
     return pool.customPoints?.[qId] !== undefined ? pool.customPoints[qId] : defaultPoints;
   };
@@ -95,8 +128,16 @@ export default function PicksTab({ pool, user, userPicks, onPicksSaved, nflStand
     if (userPicks?.selections) {
       setSelections(userPicks.selections);
       if (userPicks.tiebreaker) setTiebreaker(userPicks.tiebreaker);
+      
+      const firstIncompleteIndex = WIZARD_STEPS.findIndex(step => !isStepComplete(step, userPicks.selections, userPicks.tiebreaker || ""));
+      if (firstIncompleteIndex !== -1) {
+         setCurrentStepIndex(firstIncompleteIndex);
+      } else {
+         setCurrentStepIndex(WIZARD_STEPS.length - 1);
+      }
     } else {
       setSelections({});
+      setCurrentStepIndex(0);
     }
   }, [userPicks]);
 
@@ -166,39 +207,6 @@ export default function PicksTab({ pool, user, userPicks, onPicksSaved, nflStand
     }));
   };
 
-  const activeQuestionsList = FUTURES_QUESTIONS;
-  const standingsQuestions = activeQuestionsList.filter((q) => q.category === "standings");
-  const awardsQuestions = activeQuestionsList.filter((q) => q.category === "award");
-  const ouQuestions = activeQuestionsList.filter((q) => q.category === "over_under");
-
-  const getStandingOrder = (qId: string): string[] => {
-    const q = activeQuestionsList.find(q => q.id === qId);
-    if (!q) return [];
-    const val = selections[qId];
-    if (val) return val.split(",");
-    return q.options.map((o) => "");
-  };
-
-  
-  
-  const isStepComplete = (step: any) => {
-    if (step.category === 'standings') {
-      const q = activeQuestionsList.find(q => q.id === step.id);
-      if (!q) return false;
-      const order = getStandingOrder(q.id);
-      const isStandingsFilled = order.every(t => t !== "");
-      const isOuFilled = q.options.every(opt => !!selections[`ou_${opt.value.toLowerCase()}`]);
-      return isStandingsFilled && isOuFilled;
-    } else if (step.category === 'championship') {
-       return !!selections['afc_champ'] && !!selections['nfc_champ'] && !!selections['super_bowl'];
-    } else if (step.category === 'award') {
-       const awardQs = activeQuestionsList.filter(q => q.category === 'award');
-       return awardQs.every(q => !!selections[q.id]);
-    } else if (step.category === 'submit') {
-       return tiebreaker !== "" && Object.values(selections).filter(Boolean).length === activeQuestionsList.length;
-    }
-    return false;
-  };
 
   const answeredCount = Object.values(selections).filter(Boolean).length;
   const totalQuestions = activeQuestionsList.length;
@@ -300,16 +308,17 @@ export default function PicksTab({ pool, user, userPicks, onPicksSaved, nflStand
                const isFullyFilled = currentOrder.every((t) => t !== "");
                return (
                  <div key={q.id} className="space-y-4 max-w-2xl mx-auto">
-                    <div className="text-center mb-6">
-                      <h2 className="text-2xl font-extrabold text-white mb-2">{q.title}</h2>
-                      <p className="text-slate-400 text-sm">{q.subtitle}</p>
-                      <div className="mt-2 inline-block px-3 py-1 bg-emerald-500/15 border border-emerald-500/20 text-emerald-400 rounded-full text-xs font-mono font-bold">
+                    <div className="text-center mb-4 sm:mb-6">
+                      <h2 className="text-xl sm:text-2xl font-extrabold text-white mb-2">{q.title}</h2>
+                      <p className="text-slate-400 text-xs sm:text-sm mb-2 max-w-md mx-auto">
+                        Drag and drop to reorder from 1st to 4th place, and select Over or Under for each team's win total.
+                      </p>
+                      <div className="inline-block px-3 py-1 bg-emerald-500/15 border border-emerald-500/20 text-emerald-400 rounded-full text-[10px] sm:text-xs font-mono font-bold">
                         +{getPoints(q.id, q.points) / 4} PTS per spot (+10 PTS Bonus for exact 1-4 order)
                       </div>
                     </div>
 
-                    <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-700/50">
-                      <p className="text-xs text-slate-400 mb-4 text-center">Drag and drop to reorder the teams from 1st to 4th place, and select Over or Under for each team's win total.</p>
+                    <div className="bg-slate-900/50 p-2 sm:p-4 rounded-xl border border-slate-700/50">
                       <div className="space-y-2 relative">
                         {currentOrder.map((teamVal, index) => {
                           const slotNum = index + 1;
@@ -343,13 +352,13 @@ export default function PicksTab({ pool, user, userPicks, onPicksSaved, nflStand
                                       <div className="flex gap-1 shrink-0">
                                         <button 
                                           type="button"
-                                          onClick={(e) => { e.stopPropagation(); handleSelectOption(`ou_${teamVal.toLowerCase()}`, 'over'); }}
-                                          className={`px-3 sm:px-2 py-1 sm:py-0.5 rounded text-[10px] sm:text-[10px] font-bold transition-colors ${selections[`ou_${teamVal.toLowerCase()}`] === 'over' ? 'bg-emerald-500 text-white shadow-[0_0_10px_rgba(16,185,129,0.3)]' : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white'}`}
+                                          onClick={(e) => { e.stopPropagation(); handleSelectOption(`ou_${teamVal.toLowerCase()}`, 'OVER'); }}
+                                          className={`px-3 sm:px-2 py-1 sm:py-0.5 rounded text-[10px] sm:text-[10px] font-bold transition-colors ${selections[`ou_${teamVal.toLowerCase()}`] === 'OVER' ? 'bg-emerald-500 text-white shadow-[0_0_10px_rgba(16,185,129,0.3)]' : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white'}`}
                                         >O</button>
                                         <button 
                                           type="button"
-                                          onClick={(e) => { e.stopPropagation(); handleSelectOption(`ou_${teamVal.toLowerCase()}`, 'under'); }}
-                                          className={`px-3 sm:px-2 py-1 sm:py-0.5 rounded text-[10px] sm:text-[10px] font-bold transition-colors ${selections[`ou_${teamVal.toLowerCase()}`] === 'under' ? 'bg-rose-500 text-white shadow-[0_0_10px_rgba(244,63,94,0.3)]' : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white'}`}
+                                          onClick={(e) => { e.stopPropagation(); handleSelectOption(`ou_${teamVal.toLowerCase()}`, 'UNDER'); }}
+                                          className={`px-3 sm:px-2 py-1 sm:py-0.5 rounded text-[10px] sm:text-[10px] font-bold transition-colors ${selections[`ou_${teamVal.toLowerCase()}`] === 'UNDER' ? 'bg-rose-500 text-white shadow-[0_0_10px_rgba(244,63,94,0.3)]' : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white'}`}
                                         >U</button>
                                       </div>
                                     </div>

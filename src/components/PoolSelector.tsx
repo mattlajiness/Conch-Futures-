@@ -329,17 +329,23 @@ export default function PoolSelector({ user, onSelectPool }: PoolSelectorProps) 
           <p className="text-slate-300 text-sm sm:text-base leading-relaxed mb-6">
             Compete against your friends to see who can predict NFL futures the best! Join a private pool or create your own, lock in your picks, and track live standings all season long.
           </p>
-          <div className="flex gap-4">
-             <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-teal-500/10 text-teal-400 rounded-lg text-xs font-mono font-bold border border-teal-500/20"><Trophy className="w-4 h-4"/> 140+ Futures</span>
-             <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-rose-500/10 text-rose-400 rounded-lg text-xs font-mono font-bold border border-rose-500/20"><Heart className="w-4 h-4"/> Live Grading</span>
-          </div>
         </div>
         
-        <div className="relative z-10 hidden md:flex items-center justify-center p-6 bg-slate-900/50 backdrop-blur border border-slate-700/50 rounded-2xl shadow-xl">
-           <div className="flex flex-col gap-3">
-             <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">Are you ready for kickoff?</div>
-             <div className="text-[10px] text-slate-500">Pick division winners, major awards,<br/>and over/under win totals.</div>
-           </div>
+        <div className="relative z-10 hidden md:flex flex-col justify-center p-8 bg-gradient-to-br from-[#09222c] to-[#041014] border border-[#113a4b] rounded-3xl shadow-2xl overflow-hidden group">
+          <div className="absolute -bottom-8 -right-8 p-4 opacity-15 transform group-hover:scale-110 group-hover:-translate-x-2 group-hover:-translate-y-2 transition-all duration-700">
+            <Trophy className="w-48 h-48 text-teal-400" />
+          </div>
+          <div className="flex flex-col gap-4 relative z-20">
+            <div>
+              <h3 className="text-2xl font-extrabold text-white mb-2 font-display">Are you ready for kickoff?</h3>
+              <p className="text-teal-100/60 text-sm leading-relaxed max-w-sm">
+                Lock in your predictions for division winners, major awards, and every team's over/under win totals before the season starts.
+              </p>
+            </div>
+            <div className="inline-flex items-center justify-center px-3 py-1 bg-teal-500/10 border border-teal-500/20 text-teal-400 text-[10px] font-bold uppercase tracking-widest rounded-full w-fit mt-2">
+              2026-2027 Season
+            </div>
+          </div>
         </div>
       </div>
 

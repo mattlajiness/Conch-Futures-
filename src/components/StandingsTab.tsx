@@ -103,7 +103,7 @@ export default function StandingsTab({ pool, user, userPicks, categoryFilter = "
                 }
                 correctCount += matches / 4;
               }
-            } else if (userPick === officialWinner) {
+            } else if (userPick?.toString().toUpperCase() === officialWinner?.toString().toUpperCase()) {
               score += getPoints(q.id, q.points);
               correctCount += 1;
             }
@@ -431,8 +431,8 @@ export default function StandingsTab({ pool, user, userPicks, categoryFilter = "
                     pickLabel = "No prediction";
                   }
                 } else {
-                  isCorrect = userPick && officialWinner && userPick === officialWinner;
-                  const baseLabel = q.options.find((o) => o.value === userPick)?.label || "No pick";
+                  isCorrect = userPick && officialWinner && userPick.toString().toUpperCase() === officialWinner.toString().toUpperCase();
+                  const baseLabel = q.options.find((o) => o.value.toUpperCase() === userPick?.toUpperCase())?.label || "No pick";
                   let std = nflStandings?.[userPick];
                   if (q.category === "over_under") {
                     const teamValue = q.id.split('_')[1]?.toUpperCase();
