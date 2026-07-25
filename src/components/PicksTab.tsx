@@ -124,7 +124,10 @@ export default function PicksTab({ pool, user, userPicks, onPicksSaved, nflStand
 
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
+  const hasInitialized = useRef(false);
   useEffect(() => {
+    if (hasInitialized.current) return;
+    
     if (userPicks?.selections) {
       setSelections(userPicks.selections);
       if (userPicks.tiebreaker) setTiebreaker(userPicks.tiebreaker);
@@ -135,9 +138,12 @@ export default function PicksTab({ pool, user, userPicks, onPicksSaved, nflStand
       } else {
          setCurrentStepIndex(WIZARD_STEPS.length - 1);
       }
-    } else {
+      hasInitialized.current = true;
+    } else if (userPicks === null) {
+      // If userPicks is explicitly null (not loaded yet, or explicitly no picks)
       setSelections({});
       setCurrentStepIndex(0);
+      hasInitialized.current = true;
     }
   }, [userPicks]);
 
