@@ -318,9 +318,6 @@ export default function PoolSelector({ user, onSelectPool }: PoolSelectorProps) 
     <div className="max-w-6xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
       {/* Hero Welcome banner */}
       <div className="relative overflow-hidden bg-gradient-to-br from-[#09222c] to-[#041014] border border-[#113a4b]/80 rounded-2xl p-6 sm:p-10 mb-8 shadow-2xl flex flex-col md:flex-row items-center gap-8 justify-between">
-        <div className="absolute right-0 bottom-0 opacity-10 pointer-events-none transform translate-y-6 translate-x-6">
-          <Logo size={320} variant="full" />
-        </div>
         <div className="max-w-2xl relative z-10">
           <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-white mb-4">
             Welcome to the <br/>
