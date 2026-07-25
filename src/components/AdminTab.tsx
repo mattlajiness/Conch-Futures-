@@ -39,6 +39,7 @@ export default function AdminTab({ pool, onPoolUpdated, categoryFilter = "all", 
   // Configuration state
   const [activeQuestions, setActiveQuestions] = useState<string[]>([]);
   const [customPoints, setCustomPoints] = useState<Record<string, number>>({});
+  const [poolDeadline, setPoolDeadline] = useState<string>("");
   const [savingConfig, setSavingConfig] = useState(false);
   
   // Notification status
@@ -55,6 +56,19 @@ export default function AdminTab({ pool, onPoolUpdated, categoryFilter = "all", 
     if (pool.customPoints) {
       setCustomPoints(pool.customPoints);
     }
+    
+    if (pool.deadline) {
+       const d = pool.deadline.toDate ? pool.deadline.toDate() : new Date(pool.deadline);
+       const year = d.getFullYear();
+       const month = String(d.getMonth() + 1).padStart(2, '0');
+       const day = String(d.getDate()).padStart(2, '0');
+       const hours = String(d.getHours()).padStart(2, '0');
+       const mins = String(d.getMinutes()).padStart(2, '0');
+       setPoolDeadline(`${year}-${month}-${day}T${hours}:${mins}`);
+    } else {
+       setPoolDeadline("2026-09-10T20:20");
+    }
+
     if (pool.activeQuestions) {
       setActiveQuestions(pool.activeQuestions);
     } else {
@@ -241,15 +255,18 @@ export default function AdminTab({ pool, onPoolUpdated, categoryFilter = "all", 
 
     const path = `pools/${pool.id}`;
     try {
+      const deadlineDate = poolDeadline ? new Date(poolDeadline) : new Date("2026-09-10T20:20:00-04:00");
       await updateDoc(doc(db, path), {
         activeQuestions,
         customPoints,
+        deadline: deadlineDate,
       });
 
       const updatedPool: Pool = {
         ...pool,
         activeQuestions,
         customPoints,
+        deadline: deadlineDate,
       };
       onPoolUpdated(updatedPool);
 
@@ -330,18 +347,30 @@ export default function AdminTab({ pool, onPoolUpdated, categoryFilter = "all", 
           </div>
 
           {/* Sticky header controls for Config */}
-          <div className="bg-slate-800 border border-slate-700/60 rounded-xl p-3 flex justify-between items-center gap-2 sticky top-3 z-20 shadow-md">
-            <div>
+          <div className="bg-slate-800 border border-slate-700/60 rounded-xl p-3 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sticky top-3 z-20 shadow-md">
+            <div className="flex-1">
               <h4 className="text-white text-xs font-extrabold uppercase tracking-wider">Active Futures Pool Setup</h4>
               <p className="text-slate-400 text-[11px] mt-0.5">Toggle categories to restrict or expand active questions.</p>
             </div>
-            <button
-              onClick={handleSaveConfig}
-              disabled={savingConfig}
-              className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold disabled:opacity-50 transition-colors cursor-pointer"
-            >
-              <Save className="w-3.5 h-3.5" /> {savingConfig ? "Saving..." : "Save Active Config"}
-            </button>
+            
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
+              <div className="flex items-center gap-2 bg-slate-900 px-2 py-1.5 rounded-lg border border-slate-700">
+                <span className="text-[10px] text-slate-400 font-bold uppercase">Deadline:</span>
+                <input
+                  type="datetime-local"
+                  value={poolDeadline}
+                  onChange={(e) => setPoolDeadline(e.target.value)}
+                  className="bg-transparent text-white text-[11px] font-mono focus:outline-none"
+                />
+              </div>
+              <button
+                onClick={handleSaveConfig}
+                disabled={savingConfig}
+                className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold disabled:opacity-50 transition-colors cursor-pointer whitespace-nowrap"
+              >
+                <Save className="w-3.5 h-3.5" /> {savingConfig ? "Saving..." : "Save Config"}
+              </button>
+            </div>
           </div>
 
           {/* Group 1: Awards */}

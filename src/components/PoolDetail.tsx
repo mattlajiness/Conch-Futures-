@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { ArrowLeft, Award, Users, Save, Sparkles, Settings, Copy, Check, Share2, RefreshCw, Search, History } from "lucide-react";
+import { ArrowLeft, Award, Users, Save, Sparkles, Settings, Copy, Check, Share2, RefreshCw, Search, History, Clock, Timer } from "lucide-react";
 import { Pool, Picks } from "../types";
 import { doc, getDoc, onSnapshot } from "firebase/firestore";
 import { db } from "../lib/firebase";
@@ -17,6 +17,56 @@ interface PoolDetailProps {
 }
 
 type TabType = "standings" | "my_picks" | "compare" | "admin" | "last_year";
+
+const CountdownTimer = ({ targetDate }: { targetDate: Date }) => {
+  const [timeLeft, setTimeLeft] = useState<{ d: number; h: number; m: number; s: number } | null>(null);
+
+  useEffect(() => {
+    const calculateTimeLeft = () => {
+      const difference = targetDate.getTime() - new Date().getTime();
+      if (difference > 0) {
+        return {
+          d: Math.floor(difference / (1000 * 60 * 60 * 24)),
+          h: Math.floor((difference / (1000 * 60 * 60)) % 24),
+          m: Math.floor((difference / 1000 / 60) % 60),
+          s: Math.floor((difference / 1000) % 60),
+        };
+      }
+      return null;
+    };
+
+    setTimeLeft(calculateTimeLeft());
+    const timer = setInterval(() => {
+      setTimeLeft(calculateTimeLeft());
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [targetDate]);
+
+  if (!timeLeft) {
+    return (
+      <div className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-500/10 border border-rose-500/20 rounded-md text-rose-400 mt-2 sm:mt-0">
+        <Clock className="w-4 h-4 shrink-0" />
+        <span className="text-[10px] font-bold uppercase tracking-wider">Deadline Passed</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-900 border border-slate-700/60 rounded-md shadow-sm mt-2 sm:mt-0">
+      <Timer className="w-4 h-4 text-amber-400 shrink-0" />
+      <div className="flex flex-col">
+        <span className="text-[9px] uppercase font-bold text-slate-500 tracking-wider">Pick Deadline</span>
+        <div className="flex items-center gap-1 text-[11px] font-mono font-bold text-amber-400">
+          {timeLeft.d > 0 && <span>{timeLeft.d}d</span>}
+          <span>{timeLeft.h.toString().padStart(2, '0')}h</span>
+          <span>{timeLeft.m.toString().padStart(2, '0')}m</span>
+          <span>{timeLeft.s.toString().padStart(2, '0')}s</span>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export default function PoolDetail({ pool: initialPool, user, onBack }: PoolDetailProps) {
   const [pool, setPool] = useState<Pool>(initialPool);
@@ -167,7 +217,10 @@ export default function PoolDetail({ pool: initialPool, user, onBack }: PoolDeta
 
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-2.5">
           <div>
-            <h1 className="text-2xl font-extrabold text-white">{pool.name}</h1>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4">
+              <h1 className="text-2xl font-extrabold text-white">{pool.name}</h1>
+              <CountdownTimer targetDate={pool.deadline?.toDate ? pool.deadline.toDate() : (pool.deadline ? new Date(pool.deadline) : new Date("2026-09-10T20:20:00-04:00"))} />
+            </div>
             {pool.description && (
               <p className="text-slate-400 text-sm mt-1 max-w-xl leading-relaxed">
                 {pool.description}

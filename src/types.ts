@@ -6,6 +6,7 @@ export interface Pool {
   creatorId: string;
   creatorName: string;
   createdAt: any; // Timestamp or date string
+  deadline?: any; // Timestamp or date string for pick submission deadline
   results?: Record<string, string>;
   tiebreakerResult?: string; // Map of categoryId -> officialWinner
   activeQuestions?: string[]; // Optional active question IDs for this pool

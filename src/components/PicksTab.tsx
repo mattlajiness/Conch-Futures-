@@ -662,6 +662,75 @@ export default function PicksTab({ pool, user, userPicks, onPicksSaved, nflStand
                  </div>
                </div>
 
+               {/* Summary Section */}
+               <div className="mt-6 mb-8">
+                 <h2 className="text-sm font-extrabold text-white tracking-wider flex items-center gap-2 mb-4 uppercase">
+                   Your Picks Summary
+                 </h2>
+                 <div className="space-y-4">
+                   {WIZARD_STEPS.filter(s => s.id !== 'submit').map((step, idx) => {
+                     let stepQuestions: any[] = [];
+                     if (step.category === 'standings') {
+                       stepQuestions = [activeQuestionsList.find(q => q.id === step.id)].filter(Boolean);
+                     } else {
+                       stepQuestions = activeQuestionsList.filter(q => q.category === step.category);
+                     }
+                     
+                     return (
+                       <div key={step.id} className="bg-slate-900/50 rounded-xl p-4 border border-slate-700/50">
+                         <div className="flex justify-between items-center mb-3">
+                            <h4 className="font-bold text-sm text-teal-400">{step.label}</h4>
+                            <button 
+                               onClick={() => setCurrentStepIndex(idx)} 
+                               className="text-xs text-slate-400 hover:text-white underline decoration-slate-600 underline-offset-2 transition-colors"
+                            >
+                               Edit
+                            </button>
+                         </div>
+                         
+                         {step.category === 'standings' && stepQuestions.length > 0 && (
+                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                             {(() => {
+                               const q = stepQuestions[0];
+                               const order = getStandingOrder(q.id, selections);
+                               return order.map((teamVal, index) => {
+                                 const teamLabel = q.options.find((o: any) => o.value === teamVal)?.label || "Unassigned";
+                                 const ouPick = selections[`ou_${teamVal?.toLowerCase()}`] || "-";
+                                 return (
+                                   <div key={index} className="flex items-center justify-between bg-slate-800/80 px-3 py-2 rounded border border-slate-700/50 text-xs">
+                                     <span className="text-slate-300 truncate mr-2"><span className="text-slate-500 font-mono mr-1.5">{index + 1}.</span> {teamLabel}</span>
+                                     {teamVal && (
+                                       <span className={`font-bold font-mono px-1.5 py-0.5 rounded ${ouPick === 'OVER' ? 'text-emerald-400 bg-emerald-500/10' : ouPick === 'UNDER' ? 'text-rose-400 bg-rose-500/10' : 'text-slate-500'}`}>
+                                         {ouPick}
+                                       </span>
+                                     )}
+                                   </div>
+                                 );
+                               });
+                             })()}
+                           </div>
+                         )}
+               
+                         {step.category !== 'standings' && (
+                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                             {stepQuestions.map(q => {
+                               const val = selections[q.id];
+                               const label = q.options.find((o: any) => o.value === val)?.label || <span className="text-slate-500 italic">Missing</span>;
+                               return (
+                                 <div key={q.id} className="bg-slate-800/80 px-3 py-2 rounded border border-slate-700/50 text-xs flex flex-col gap-1">
+                                   <span className="text-slate-400 text-[10px] uppercase font-bold tracking-wider">{q.title}</span>
+                                   <span className="text-slate-200 font-medium truncate">{label}</span>
+                                 </div>
+                               )
+                             })}
+                           </div>
+                         )}
+                       </div>
+                     );
+                   })}
+                 </div>
+               </div>
+
                {/* Tiebreaker Section */}
                <div className="mt-6 mb-8">
                  <h2 className="text-sm font-extrabold text-white tracking-wider flex items-center gap-2 mb-2 uppercase">
