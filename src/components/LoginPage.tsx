@@ -9,12 +9,6 @@ interface LoginPageProps {
 export default function LoginPage({ onSignIn }: LoginPageProps) {
   return (
     <div className="min-h-screen bg-[#061217] flex flex-col justify-between relative overflow-hidden">
-      <div className="relative z-20 w-full bg-gradient-to-r from-purple-700 via-purple-600 to-fuchsia-600 border-b-2 border-purple-400/60 shadow-[0_0_50px_-5px_rgba(168,85,247,0.6)] px-6 py-4 text-center">
-        <p className="text-white font-extrabold text-base sm:text-xl tracking-tight font-display">
-          peppahjackk's AI says hello to the beach justice
-        </p>
-      </div>
-
       {/* Subtle decorative stadium grid background lines */}
       <div className="absolute inset-0 bg-[linear-gradient(rgba(16,165,185,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(16,165,185,0.02)_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none"></div>
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-teal-500/5 blur-[120px] rounded-full pointer-events-none"></div>
