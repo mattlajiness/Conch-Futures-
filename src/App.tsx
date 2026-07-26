@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from "react";
-import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from "firebase/auth";
+import React, { useState } from "react";
 import { LogOut } from "lucide-react";
-import { auth } from "./lib/firebase";
+import { useAuth } from "./lib/auth";
 import { Pool } from "./types";
 import PoolSelector from "./components/PoolSelector";
 import PoolDetail from "./components/PoolDetail";
@@ -9,34 +8,12 @@ import LoginPage from "./components/LoginPage";
 import Logo from "./components/Logo";
 
 export default function App() {
-  const [user, setUser] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const { user, loading, signIn, signOut } = useAuth();
   const [selectedPool, setSelectedPool] = useState<Pool | null>(null);
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-      setUser(firebaseUser);
-      setLoading(false);
-    });
-    return () => unsubscribe();
-  }, []);
-
-  const handleSignIn = async () => {
-    const provider = new GoogleAuthProvider();
-    try {
-      await signInWithPopup(auth, provider);
-    } catch (err) {
-      console.error("Sign-in error", err);
-    }
-  };
-
   const handleSignOut = async () => {
-    try {
-      await signOut(auth);
-      setSelectedPool(null);
-    } catch (err) {
-      console.error("Sign-out error", err);
-    }
+    await signOut();
+    setSelectedPool(null);
   };
 
   if (loading) {
@@ -50,7 +27,7 @@ export default function App() {
 
   // Not signed in
   if (!user) {
-    return <LoginPage onSignIn={handleSignIn} />;
+    return <LoginPage onSignIn={signIn} />;
   }
 
   // Signed in layout

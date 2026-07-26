@@ -4,12 +4,13 @@ import { Save, Check, Award, Compass, ShieldAlert, Zap, ListOrdered, GripVertica
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import { db, OperationType, handleFirestoreError } from "../lib/firebase";
+import { AuthUser } from "../lib/auth";
 import { Picks, Pool } from "../types";
 import { TeamStandingInfo } from "../lib/nflApi";
 
 interface PicksTabProps {
   pool: Pool;
-  user: any;
+  user: AuthUser;
   userPicks: Picks | null;
   onPicksSaved: (newPicks: Picks) => void;
   categoryFilter?: string;

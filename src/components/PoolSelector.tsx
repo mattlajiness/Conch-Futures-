@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { collection, query, where, getDocs, doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
 import { Trophy, Plus, LogIn, Lock, Users, ArrowRight, AlertCircle, Sparkles, Heart, Activity, UserPlus, CheckCircle2 } from "lucide-react";
-import { db, auth, OperationType, handleFirestoreError } from "../lib/firebase";
+import { db, OperationType, handleFirestoreError } from "../lib/firebase";
+import { AuthUser } from "../lib/auth";
 import { FUTURES_QUESTIONS } from "../constants";
 import { Pool } from "../types";
 import Logo from "./Logo";
@@ -15,7 +16,7 @@ type ActivityItem = {
 };
 
 interface PoolSelectorProps {
-  user: any;
+  user: AuthUser;
   onSelectPool: (pool: Pool) => void;
 }
 

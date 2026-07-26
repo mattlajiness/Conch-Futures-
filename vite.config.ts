@@ -5,6 +5,9 @@ import {defineConfig} from 'vite';
 
 export default defineConfig(() => {
   return {
+    // Allows the app to be served from a sub-path (e.g. VITE_BASE_PATH=/conch/
+    // when embedded in another site). Defaults to root for the normal flow.
+    base: process.env.VITE_BASE_PATH || '/',
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {
