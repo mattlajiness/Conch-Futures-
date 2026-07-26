@@ -60,10 +60,7 @@ export default function LoginPage({ onSignIn }: LoginPageProps) {
               <span>Continue with Google</span>
             </button>
 
-            <div className="mt-12 flex justify-center lg:justify-start gap-8 text-[10px] sm:text-xs uppercase font-mono tracking-wider text-teal-500/80">
-              <span className="flex items-center gap-1.5"><Shield className="w-4 h-4 text-teal-400" /> Private Pools</span>
-              <span className="flex items-center gap-1.5"><Heart className="w-4 h-4 text-rose-400" /> Live Standings</span>
-            </div>
+
           </div>
 
           {/* Right Visuals Bento Box (Hidden on mobile) */}
