@@ -3,6 +3,7 @@ import { ArrowLeft, Award, Users, Save, Sparkles, Settings, Copy, Check, Share2,
 import { Pool, Picks } from "../types";
 import { doc, getDoc, onSnapshot } from "firebase/firestore";
 import { db } from "../lib/firebase";
+import { AuthUser } from "../lib/auth";
 import StandingsTab from "./StandingsTab";
 import PicksTab from "./PicksTab";
 import ComparePicksTab from "./ComparePicksTab";
@@ -13,7 +14,7 @@ import { FUTURES_QUESTIONS } from "../constants";
 
 interface PoolDetailProps {
   pool: Pool;
-  user: any;
+  user: AuthUser;
   onBack: () => void;
 }
 

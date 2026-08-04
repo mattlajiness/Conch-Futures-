@@ -1,13 +1,36 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { initializeFirestore, doc, getDocFromServer } from 'firebase/firestore';
-import firebaseConfig from '../../firebase-applet-config.json';
+import appletConfig from '../../firebase-applet-config.json';
+
+// Setting VITE_FIREBASE_PROJECT_ID (plus the other VITE_FIREBASE_* vars, see
+// .env.example) points the app at a different Firebase project. With no env
+// vars set, the committed applet config is used unchanged.
+const env = import.meta.env;
+const useEnvConfig = Boolean(env.VITE_FIREBASE_PROJECT_ID);
+
+const firebaseConfig = useEnvConfig
+  ? {
+      apiKey: env.VITE_FIREBASE_API_KEY,
+      authDomain: env.VITE_FIREBASE_AUTH_DOMAIN,
+      projectId: env.VITE_FIREBASE_PROJECT_ID,
+      storageBucket: env.VITE_FIREBASE_STORAGE_BUCKET,
+      messagingSenderId: env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+      appId: env.VITE_FIREBASE_APP_ID,
+    }
+  : appletConfig;
+
+// The applet project stores its data in a named Firestore database, not
+// "(default)" — the app breaks if that id isn't passed to initializeFirestore.
+// An env-configured project uses VITE_FIREBASE_DATABASE_ID, or the default
+// database when unset.
+const databaseId = useEnvConfig ? env.VITE_FIREBASE_DATABASE_ID : appletConfig.firestoreDatabaseId;
 
 const app = initializeApp(firebaseConfig);
 export const db = initializeFirestore(app, {
   experimentalForceLongPolling: true,
   useFetchStreams: false,
-} as any, firebaseConfig.firestoreDatabaseId); /* CRITICAL: The app will break without this line */
+} as any, databaseId);
 export const auth = getAuth();
 
 // Validate connection to Firestore as requested by the Firebase Integration guidelines
@@ -23,7 +46,9 @@ async function testConnection() {
     }
   }
 }
-testConnection();
+if (import.meta.env.DEV) {
+  testConnection();
+}
 
 export enum OperationType {
   CREATE = 'create',

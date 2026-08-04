@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "../lib/firebase";
+import { AuthUser } from "../lib/auth";
 import { FUTURES_QUESTIONS, NFL_WIN_TOTALS } from "../constants";
 import { Pool, Picks, StandingRow } from "../types";
 import { Medal, Check, X, ShieldAlert, Award, AlertCircle, RefreshCw, Crown, TrendingUp, Users } from "lucide-react";
@@ -8,7 +9,7 @@ import { TeamStandingInfo } from "../lib/nflApi";
 
 interface StandingsTabProps {
   pool: Pool;
-  user: any;
+  user: AuthUser;
   userPicks: Picks | null;
   categoryFilter?: string;
   nflStandings?: Record<string, TeamStandingInfo>;

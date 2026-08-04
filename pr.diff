@@ -1,0 +1,366 @@
+diff --git a/.env.example b/.env.example
+index 7a550fe..e5e6c43 100644
+--- a/.env.example
++++ b/.env.example
+@@ -7,3 +7,20 @@ GEMINI_API_KEY="MY_GEMINI_API_KEY"
+ # AI Studio automatically injects this at runtime with the Cloud Run service URL.
+ # Used for self-referential links, OAuth callbacks, and API endpoints.
+ APP_URL="MY_APP_URL"
++
++# Optional: point the app at a different Firebase project.
++# When VITE_FIREBASE_PROJECT_ID is unset, the committed
++# firebase-applet-config.json is used (the AI Studio default).
++# VITE_FIREBASE_DATABASE_ID is only needed if the project uses a named
++# Firestore database; leave unset for "(default)".
++# VITE_FIREBASE_API_KEY=""
++# VITE_FIREBASE_AUTH_DOMAIN=""
++# VITE_FIREBASE_PROJECT_ID=""
++# VITE_FIREBASE_STORAGE_BUCKET=""
++# VITE_FIREBASE_MESSAGING_SENDER_ID=""
++# VITE_FIREBASE_APP_ID=""
++# VITE_FIREBASE_DATABASE_ID=""
++
++# Optional: serve the app from a sub-path (build-time only).
++# Example: VITE_BASE_PATH="/conch/" when embedding under another site.
++# VITE_BASE_PATH="/"
+diff --git a/src/App.tsx b/src/App.tsx
+index 61c9ea7..968558c 100644
+--- a/src/App.tsx
++++ b/src/App.tsx
+@@ -1,7 +1,6 @@
+-import React, { useState, useEffect } from "react";
+-import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from "firebase/auth";
++import React, { useState } from "react";
+ import { LogOut } from "lucide-react";
+-import { auth } from "./lib/firebase";
++import { useAuth } from "./lib/auth";
+ import { Pool } from "./types";
+ import PoolSelector from "./components/PoolSelector";
+ import PoolDetail from "./components/PoolDetail";
+@@ -9,34 +8,12 @@ import LoginPage from "./components/LoginPage";
+ import Logo from "./components/Logo";
+ 
+ export default function App() {
+-  const [user, setUser] = useState<any>(null);
+-  const [loading, setLoading] = useState(true);
++  const { user, loading, signIn, signOut } = useAuth();
+   const [selectedPool, setSelectedPool] = useState<Pool | null>(null);
+ 
+-  useEffect(() => {
+-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+-      setUser(firebaseUser);
+-      setLoading(false);
+-    });
+-    return () => unsubscribe();
+-  }, []);
+-
+-  const handleSignIn = async () => {
+-    const provider = new GoogleAuthProvider();
+-    try {
+-      await signInWithPopup(auth, provider);
+-    } catch (err) {
+-      console.error("Sign-in error", err);
+-    }
+-  };
+-
+   const handleSignOut = async () => {
+-    try {
+-      await signOut(auth);
+-      setSelectedPool(null);
+-    } catch (err) {
+-      console.error("Sign-out error", err);
+-    }
++    await signOut();
++    setSelectedPool(null);
+   };
+ 
+   if (loading) {
+@@ -50,7 +27,7 @@ export default function App() {
+ 
+   // Not signed in
+   if (!user) {
+-    return <LoginPage onSignIn={handleSignIn} />;
++    return <LoginPage onSignIn={signIn} />;
+   }
+ 
+   // Signed in layout
+diff --git a/src/components/LoginPage.tsx b/src/components/LoginPage.tsx
+index 6e82a23..e82262b 100644
+--- a/src/components/LoginPage.tsx
++++ b/src/components/LoginPage.tsx
+@@ -9,12 +9,6 @@ interface LoginPageProps {
+ export default function LoginPage({ onSignIn }: LoginPageProps) {
+   return (
+     <div className="min-h-screen bg-[#061217] flex flex-col justify-between relative overflow-hidden">
+-      <div className="relative z-20 w-full bg-gradient-to-r from-purple-700 via-purple-600 to-fuchsia-600 border-b-2 border-purple-400/60 shadow-[0_0_50px_-5px_rgba(168,85,247,0.6)] px-6 py-4 text-center">
+-        <p className="text-white font-extrabold text-base sm:text-xl tracking-tight font-display">
+-          peppahjackk's AI says hello to the beach justice
+-        </p>
+-      </div>
+-
+       {/* Subtle decorative stadium grid background lines */}
+       <div className="absolute inset-0 bg-[linear-gradient(rgba(16,165,185,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(16,165,185,0.02)_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none"></div>
+       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-teal-500/5 blur-[120px] rounded-full pointer-events-none"></div>
+diff --git a/src/components/PicksTab.tsx b/src/components/PicksTab.tsx
+index b460028..0fb3201 100644
+--- a/src/components/PicksTab.tsx
++++ b/src/components/PicksTab.tsx
+@@ -4,12 +4,13 @@ import { Save, Check, Award, Compass, ShieldAlert, Zap, ListOrdered, GripVertica
+ import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+ import { CheckCircle2, Loader2 } from "lucide-react";
+ import { db, OperationType, handleFirestoreError } from "../lib/firebase";
++import { AuthUser } from "../lib/auth";
+ import { Picks, Pool } from "../types";
+ import { TeamStandingInfo } from "../lib/nflApi";
+ 
+ interface PicksTabProps {
+   pool: Pool;
+-  user: any;
++  user: AuthUser;
+   userPicks: Picks | null;
+   onPicksSaved: (newPicks: Picks) => void;
+   categoryFilter?: string;
+diff --git a/src/components/PoolDetail.tsx b/src/components/PoolDetail.tsx
+index c898b40..56858e7 100644
+--- a/src/components/PoolDetail.tsx
++++ b/src/components/PoolDetail.tsx
+@@ -3,6 +3,7 @@ import { ArrowLeft, Award, Users, Save, Sparkles, Settings, Copy, Check, Share2,
+ import { Pool, Picks } from "../types";
+ import { doc, getDoc, onSnapshot } from "firebase/firestore";
+ import { db } from "../lib/firebase";
++import { AuthUser } from "../lib/auth";
+ import StandingsTab from "./StandingsTab";
+ import PicksTab from "./PicksTab";
+ import ComparePicksTab from "./ComparePicksTab";
+@@ -12,7 +13,7 @@ import { fetchNflStandings, TeamStandingInfo } from "../lib/nflApi";
+ 
+ interface PoolDetailProps {
+   pool: Pool;
+-  user: any;
++  user: AuthUser;
+   onBack: () => void;
+ }
+ 
+diff --git a/src/components/PoolSelector.tsx b/src/components/PoolSelector.tsx
+index 9a37126..26c6363 100644
+--- a/src/components/PoolSelector.tsx
++++ b/src/components/PoolSelector.tsx
+@@ -1,7 +1,8 @@
+ import React, { useState, useEffect } from "react";
+ import { collection, query, where, getDocs, doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
+ import { Trophy, Plus, LogIn, Lock, Users, ArrowRight, AlertCircle, Sparkles, Heart, Activity, UserPlus, CheckCircle2 } from "lucide-react";
+-import { db, auth, OperationType, handleFirestoreError } from "../lib/firebase";
++import { db, OperationType, handleFirestoreError } from "../lib/firebase";
++import { AuthUser } from "../lib/auth";
+ import { FUTURES_QUESTIONS } from "../constants";
+ import { Pool } from "../types";
+ import Logo from "./Logo";
+@@ -15,7 +16,7 @@ type ActivityItem = {
+ };
+ 
+ interface PoolSelectorProps {
+-  user: any;
++  user: AuthUser;
+   onSelectPool: (pool: Pool) => void;
+ }
+ 
+diff --git a/src/components/StandingsTab.tsx b/src/components/StandingsTab.tsx
+index 38de0ef..dab2fd4 100644
+--- a/src/components/StandingsTab.tsx
++++ b/src/components/StandingsTab.tsx
+@@ -1,6 +1,7 @@
+ import React, { useState, useEffect } from "react";
+ import { collection, getDocs } from "firebase/firestore";
+ import { db } from "../lib/firebase";
++import { AuthUser } from "../lib/auth";
+ import { FUTURES_QUESTIONS, NFL_WIN_TOTALS } from "../constants";
+ import { Pool, Picks, StandingRow } from "../types";
+ import { Medal, Check, X, ShieldAlert, Award, AlertCircle, RefreshCw, Crown, TrendingUp, Users } from "lucide-react";
+@@ -8,7 +9,7 @@ import { TeamStandingInfo } from "../lib/nflApi";
+ 
+ interface StandingsTabProps {
+   pool: Pool;
+-  user: any;
++  user: AuthUser;
+   userPicks: Picks | null;
+   categoryFilter?: string;
+   nflStandings?: Record<string, TeamStandingInfo>;
+diff --git a/src/lib/auth.tsx b/src/lib/auth.tsx
+new file mode 100644
+index 0000000..dca9494
+--- /dev/null
++++ b/src/lib/auth.tsx
+@@ -0,0 +1,79 @@
++import React, { createContext, useContext, useEffect, useState } from "react";
++import {
++  GoogleAuthProvider,
++  onAuthStateChanged,
++  signInWithPopup,
++  signOut as firebaseSignOut,
++  User as FirebaseUser,
++} from "firebase/auth";
++import { auth } from "./firebase";
++
++export interface AuthUser {
++  uid: string;
++  email: string | null;
++  displayName: string;
++  photoURL: string | null;
++}
++
++// Email/password accounts can lack a display name; fall back to the email
++// prefix so picks and standings never show a blank player.
++function toAuthUser(firebaseUser: FirebaseUser): AuthUser {
++  return {
++    uid: firebaseUser.uid,
++    email: firebaseUser.email,
++    displayName: firebaseUser.displayName || firebaseUser.email?.split("@")[0] || "Player",
++    photoURL: firebaseUser.photoURL,
++  };
++}
++
++interface AuthContextValue {
++  user: AuthUser | null;
++  loading: boolean;
++  signIn: () => Promise<void>;
++  signOut: () => Promise<void>;
++}
++
++const AuthContext = createContext<AuthContextValue | null>(null);
++
++export function AuthProvider({ children }: { children: React.ReactNode }) {
++  const [user, setUser] = useState<AuthUser | null>(null);
++  const [loading, setLoading] = useState(true);
++
++  useEffect(() => {
++    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
++      setUser(firebaseUser ? toAuthUser(firebaseUser) : null);
++      setLoading(false);
++    });
++    return () => unsubscribe();
++  }, []);
++
++  const signIn = async () => {
++    try {
++      await signInWithPopup(auth, new GoogleAuthProvider());
++    } catch (err) {
++      console.error("Sign-in error", err);
++    }
++  };
++
++  const signOut = async () => {
++    try {
++      await firebaseSignOut(auth);
++    } catch (err) {
++      console.error("Sign-out error", err);
++    }
++  };
++
++  return (
++    <AuthContext.Provider value={{ user, loading, signIn, signOut }}>
++      {children}
++    </AuthContext.Provider>
++  );
++}
++
++export function useAuth(): AuthContextValue {
++  const ctx = useContext(AuthContext);
++  if (!ctx) {
++    throw new Error("useAuth must be used within an AuthProvider");
++  }
++  return ctx;
++}
+diff --git a/src/lib/firebase.ts b/src/lib/firebase.ts
+index b2ba739..af579d9 100644
+--- a/src/lib/firebase.ts
++++ b/src/lib/firebase.ts
+@@ -1,13 +1,36 @@
+ import { initializeApp } from 'firebase/app';
+ import { getAuth } from 'firebase/auth';
+ import { initializeFirestore, doc, getDocFromServer } from 'firebase/firestore';
+-import firebaseConfig from '../../firebase-applet-config.json';
++import appletConfig from '../../firebase-applet-config.json';
++
++// Setting VITE_FIREBASE_PROJECT_ID (plus the other VITE_FIREBASE_* vars, see
++// .env.example) points the app at a different Firebase project. With no env
++// vars set, the committed applet config is used unchanged.
++const env = import.meta.env;
++const useEnvConfig = Boolean(env.VITE_FIREBASE_PROJECT_ID);
++
++const firebaseConfig = useEnvConfig
++  ? {
++      apiKey: env.VITE_FIREBASE_API_KEY,
++      authDomain: env.VITE_FIREBASE_AUTH_DOMAIN,
++      projectId: env.VITE_FIREBASE_PROJECT_ID,
++      storageBucket: env.VITE_FIREBASE_STORAGE_BUCKET,
++      messagingSenderId: env.VITE_FIREBASE_MESSAGING_SENDER_ID,
++      appId: env.VITE_FIREBASE_APP_ID,
++    }
++  : appletConfig;
++
++// The applet project stores its data in a named Firestore database, not
++// "(default)" — the app breaks if that id isn't passed to initializeFirestore.
++// An env-configured project uses VITE_FIREBASE_DATABASE_ID, or the default
++// database when unset.
++const databaseId = useEnvConfig ? env.VITE_FIREBASE_DATABASE_ID : appletConfig.firestoreDatabaseId;
+ 
+ const app = initializeApp(firebaseConfig);
+ export const db = initializeFirestore(app, {
+   experimentalForceLongPolling: true,
+   useFetchStreams: false,
+-} as any, firebaseConfig.firestoreDatabaseId); /* CRITICAL: The app will break without this line */
++} as any, databaseId);
+ export const auth = getAuth();
+ 
+ // Validate connection to Firestore as requested by the Firebase Integration guidelines
+@@ -23,7 +46,9 @@ async function testConnection() {
+     }
+   }
+ }
+-testConnection();
++if (import.meta.env.DEV) {
++  testConnection();
++}
+ 
+ export enum OperationType {
+   CREATE = 'create',
+diff --git a/src/main.tsx b/src/main.tsx
+index 080dac3..939fc6d 100644
+--- a/src/main.tsx
++++ b/src/main.tsx
+@@ -1,10 +1,13 @@
+ import {StrictMode} from 'react';
+ import {createRoot} from 'react-dom/client';
+ import App from './App.tsx';
++import {AuthProvider} from './lib/auth.tsx';
+ import './index.css';
+ 
+ createRoot(document.getElementById('root')!).render(
+   <StrictMode>
+-    <App />
++    <AuthProvider>
++      <App />
++    </AuthProvider>
+   </StrictMode>,
+ );
+diff --git a/src/vite-env.d.ts b/src/vite-env.d.ts
+new file mode 100644
+index 0000000..11f02fe
+--- /dev/null
++++ b/src/vite-env.d.ts
+@@ -0,0 +1 @@
++/// <reference types="vite/client" />
+diff --git a/vite.config.ts b/vite.config.ts
+index fc23e76..23cd45c 100644
+--- a/vite.config.ts
++++ b/vite.config.ts
+@@ -5,6 +5,9 @@ import {defineConfig} from 'vite';
+ 
+ export default defineConfig(() => {
+   return {
++    // Allows the app to be served from a sub-path (e.g. VITE_BASE_PATH=/conch/
++    // when embedded in another site). Defaults to root for the normal flow.
++    base: process.env.VITE_BASE_PATH || '/',
+     plugins: [react(), tailwindcss()],
+     resolve: {
+       alias: {

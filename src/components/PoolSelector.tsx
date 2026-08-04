@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { collection, query, where, getDocs, doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
 import { Trophy, Plus, LogIn, Lock, Users, ArrowRight, AlertCircle, Sparkles, Heart, Activity, UserPlus, CheckCircle2 } from "lucide-react";
-import { db, auth, OperationType, handleFirestoreError } from "../lib/firebase";
+import { db, OperationType, handleFirestoreError } from "../lib/firebase";
+import { AuthUser } from "../lib/auth";
 import { FUTURES_QUESTIONS } from "../constants";
 import { Pool } from "../types";
 import Logo from "./Logo";
@@ -15,7 +16,7 @@ type ActivityItem = {
 };
 
 interface PoolSelectorProps {
-  user: any;
+  user: AuthUser;
   onSelectPool: (pool: Pool) => void;
 }
 
@@ -324,7 +325,7 @@ export default function PoolSelector({ user, onSelectPool }: PoolSelectorProps) 
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-cyan-400">Conch Predictor Series</span>
           </h1>
           <p className="text-slate-300 text-sm sm:text-base leading-relaxed mb-6">
-            Compete against your friends to see who can predict NFL futures the best! Join a private pool or create your own, lock in your picks, and track live standings all season long.
+            Select a pool below to get started, or create a new one to invite your friends.
           </p>
         </div>
         
