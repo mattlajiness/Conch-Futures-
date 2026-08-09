@@ -15,11 +15,22 @@ import {
   Square,
   Trash2,
   RefreshCw,
-  Trophy
+  Trophy,
+  CircleDollarSign,
+  DollarSign,
+  Users,
+  Search,
+  CheckCircle2,
+  XCircle,
+  AlertCircle,
+  Edit3,
+  Receipt,
+  PieChart,
+  RotateCcw
 } from "lucide-react";
-import { doc, updateDoc } from "firebase/firestore";
+import { doc, updateDoc, collection, getDocs } from "firebase/firestore";
 import { db, OperationType, handleFirestoreError } from "../lib/firebase";
-import { Pool } from "../types";
+import { Pool, PoolDuesPayment } from "../types";
 
 interface AdminTabProps {
   pool: Pool;
@@ -29,7 +40,7 @@ interface AdminTabProps {
 }
 
 export default function AdminTab({ pool, onPoolUpdated, categoryFilter = "all", nflStandings }: AdminTabProps) {
-  const [activeTab, setActiveTab] = useState<"grades" | "config">("grades");
+  const [activeTab, setActiveTab] = useState<"grades" | "dues" | "config">("grades");
   
   // Grading state
   const [results, setResults] = useState<Record<string, string>>({});
@@ -41,6 +52,19 @@ export default function AdminTab({ pool, onPoolUpdated, categoryFilter = "all", 
   const [customPoints, setCustomPoints] = useState<Record<string, number>>({});
   const [poolDeadline, setPoolDeadline] = useState<string>("");
   const [savingConfig, setSavingConfig] = useState(false);
+  
+  // Dues & Payments state
+  const [entryFee, setEntryFee] = useState<number>(pool.entryFee || 0);
+  const [duesNote, setDuesNote] = useState<string>(pool.duesNote || "");
+  const [payments, setPayments] = useState<Record<string, PoolDuesPayment>>(pool.payments || {});
+  const [savingDuesSettings, setSavingDuesSettings] = useState(false);
+  const [savingDuesStatus, setSavingDuesStatus] = useState(false);
+  
+  // Members list for dues tracking
+  const [members, setMembers] = useState<{ userId: string; userDisplayName: string; userPhotoURL?: string; pickCount: number }[]>([]);
+  const [loadingMembers, setLoadingMembers] = useState(false);
+  const [duesSearch, setDuesSearch] = useState("");
+  const [duesFilter, setDuesFilter] = useState<"all" | "paid" | "unpaid">("all");
   
   // Notification status
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -75,7 +99,135 @@ export default function AdminTab({ pool, onPoolUpdated, categoryFilter = "all", 
       // Default to all questions if none exist
       setActiveQuestions(FUTURES_QUESTIONS.map(q => q.id));
     }
+    if (pool.entryFee !== undefined) setEntryFee(pool.entryFee);
+    if (pool.duesNote !== undefined) setDuesNote(pool.duesNote);
+    if (pool.payments) setPayments(pool.payments);
   }, [pool]);
+
+  // FETCH POOL MEMBERS
+  const fetchPoolMembers = async () => {
+    setLoadingMembers(true);
+    try {
+      const picksRef = collection(db, `pools/${pool.id}/picks`);
+      const picksSnap = await getDocs(picksRef);
+      const memberList: { userId: string; userDisplayName: string; userPhotoURL?: string; pickCount: number }[] = [];
+      picksSnap.forEach((docSnap) => {
+        const data = docSnap.data();
+        const pickCount = data.selections ? Object.keys(data.selections).length : 0;
+        memberList.push({
+          userId: docSnap.id,
+          userDisplayName: data.userDisplayName || "Anonymous Player",
+          userPhotoURL: data.userPhotoURL,
+          pickCount,
+        });
+      });
+      memberList.sort((a, b) => a.userDisplayName.localeCompare(b.userDisplayName));
+      setMembers(memberList);
+    } catch (err) {
+      console.error("Failed to load pool members:", err);
+    } finally {
+      setLoadingMembers(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === "dues") {
+      fetchPoolMembers();
+    }
+  }, [activeTab, pool.id]);
+
+  // DUES HANDLERS
+  const handleTogglePayment = (userId: string) => {
+    setPayments((prev) => {
+      const current = prev[userId];
+      const isCurrentlyPaid = current?.paid || false;
+      return {
+        ...prev,
+        [userId]: {
+          paid: !isCurrentlyPaid,
+          paidAt: !isCurrentlyPaid ? new Date().toISOString() : undefined,
+          amount: !isCurrentlyPaid ? (current?.amount || entryFee || 0) : 0,
+          note: current?.note || "",
+        },
+      };
+    });
+  };
+
+  const handleUpdatePaymentNote = (userId: string, note: string) => {
+    setPayments((prev) => ({
+      ...prev,
+      [userId]: {
+        ...(prev[userId] || { paid: false }),
+        note,
+      },
+    }));
+  };
+
+  const handleMarkAll = (paid: boolean) => {
+    setPayments((prev) => {
+      const updated = { ...prev };
+      members.forEach((m) => {
+        updated[m.userId] = {
+          paid,
+          paidAt: paid ? new Date().toISOString() : undefined,
+          amount: paid ? (entryFee || 0) : 0,
+          note: prev[m.userId]?.note || "",
+        };
+      });
+      return updated;
+    });
+  };
+
+  const handleSaveDuesSettings = async () => {
+    setSavingDuesSettings(true);
+    setMessage(null);
+    const path = `pools/${pool.id}`;
+    try {
+      const feeNum = Math.max(0, Number(entryFee) || 0);
+      await updateDoc(doc(db, path), {
+        entryFee: feeNum,
+        duesNote: duesNote.trim(),
+      });
+
+      const updatedPool = {
+        ...pool,
+        entryFee: feeNum,
+        duesNote: duesNote.trim(),
+      };
+      onPoolUpdated(updatedPool);
+      setMessage({ type: "success", text: "League buy-in fee and payment instructions saved!" });
+      setTimeout(() => setMessage(null), 4000);
+    } catch (err) {
+      setMessage({ type: "error", text: "Failed to save buy-in settings. Please try again." });
+      handleFirestoreError(err, OperationType.UPDATE, path);
+    } finally {
+      setSavingDuesSettings(false);
+    }
+  };
+
+  const handleSavePayments = async () => {
+    setSavingDuesStatus(true);
+    setMessage(null);
+    const path = `pools/${pool.id}`;
+    try {
+      await updateDoc(doc(db, path), {
+        payments,
+      });
+
+      const updatedPool = {
+        ...pool,
+        payments,
+      };
+      onPoolUpdated(updatedPool);
+      setMessage({ type: "success", text: "League dues payment statuses saved successfully!" });
+      setTimeout(() => setMessage(null), 4000);
+    } catch (err) {
+      setMessage({ type: "error", text: "Failed to update dues payment statuses." });
+      handleFirestoreError(err, OperationType.UPDATE, path);
+    } finally {
+      setSavingDuesStatus(false);
+    }
+  };
 
   // GRADING HELPERS
   const handleAutoSyncNFL = () => {
@@ -292,13 +444,36 @@ export default function AdminTab({ pool, onPoolUpdated, categoryFilter = "all", 
     (q) => !pool.activeQuestions || pool.activeQuestions.includes(q.id)
   );
 
+  // Filter members for dues tracker
+  const filteredMembers = members.filter((m) => {
+    const matchesSearch = m.userDisplayName.toLowerCase().includes(duesSearch.toLowerCase());
+    const isPaid = payments[m.userId]?.paid || false;
+    if (duesFilter === "paid") return matchesSearch && isPaid;
+    if (duesFilter === "unpaid") return matchesSearch && !isPaid;
+    return matchesSearch;
+  });
+
+  const totalMembersCount = members.length;
+  const paidMembersCount = members.filter((m) => payments[m.userId]?.paid).length;
+  const unpaidMembersCount = totalMembersCount - paidMembersCount;
+  
+  const totalCollectedAmount = members.reduce((sum, m) => {
+    if (payments[m.userId]?.paid) {
+      return sum + (payments[m.userId]?.amount ?? entryFee ?? 0);
+    }
+    return sum;
+  }, 0);
+
+  const totalExpectedAmount = totalMembersCount * (entryFee || 0);
+  const outstandingAmount = Math.max(0, totalExpectedAmount - totalCollectedAmount);
+
   return (
     <div className="space-y-2">
       {/* Tab Switcher */}
-      <div className="flex border-b border-slate-700/60 pb-px mb-2">
+      <div className="flex border-b border-slate-700/60 pb-px mb-2 overflow-x-auto scrollbar-none">
         <button
           onClick={() => setActiveTab("grades")}
-          className={`flex items-center gap-2 px-2 py-1.5 text-xs font-bold uppercase tracking-wider border-b-2 transition-all cursor-pointer ${
+          className={`flex items-center gap-2 px-3 py-2 text-xs font-bold uppercase tracking-wider border-b-2 transition-all cursor-pointer whitespace-nowrap ${
             activeTab === "grades"
               ? "border-emerald-500 text-emerald-400"
               : "border-transparent text-slate-400 hover:text-slate-200"
@@ -307,8 +482,23 @@ export default function AdminTab({ pool, onPoolUpdated, categoryFilter = "all", 
           <ClipboardList className="w-4 h-4" /> Grade Results
         </button>
         <button
+          onClick={() => setActiveTab("dues")}
+          className={`flex items-center gap-2 px-3 py-2 text-xs font-bold uppercase tracking-wider border-b-2 transition-all cursor-pointer whitespace-nowrap ${
+            activeTab === "dues"
+              ? "border-emerald-500 text-emerald-400 bg-emerald-500/5"
+              : "border-transparent text-slate-400 hover:text-slate-200"
+          }`}
+        >
+          <CircleDollarSign className="w-4 h-4 text-emerald-400" /> League Dues
+          {unpaidMembersCount > 0 && (entryFee || 0) > 0 && (
+            <span className="ml-1 px-1.5 py-0.5 bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded-full text-[10px] font-mono">
+              {unpaidMembersCount} Unpaid
+            </span>
+          )}
+        </button>
+        <button
           onClick={() => setActiveTab("config")}
-          className={`flex items-center gap-2 px-2 py-1.5 text-xs font-bold uppercase tracking-wider border-b-2 transition-all cursor-pointer ${
+          className={`flex items-center gap-2 px-3 py-2 text-xs font-bold uppercase tracking-wider border-b-2 transition-all cursor-pointer whitespace-nowrap ${
             activeTab === "config"
               ? "border-emerald-500 text-emerald-400"
               : "border-transparent text-slate-400 hover:text-slate-200"
@@ -331,6 +521,325 @@ export default function AdminTab({ pool, onPoolUpdated, categoryFilter = "all", 
           <button onClick={() => setMessage(null)} className="text-[10px] underline cursor-pointer">
             Dismiss
           </button>
+        </div>
+      )}
+
+            {/* DUES TRACKER TAB */}
+      {activeTab === "dues" && (
+        <div className="space-y-4">
+          <div className="bg-gradient-to-r from-emerald-950/60 to-slate-900 border border-emerald-500/20 rounded-2xl p-3.5">
+            <h3 className="font-bold text-emerald-400 text-sm flex items-center gap-2">
+              <CircleDollarSign className="w-5 h-5 text-emerald-400" /> League Dues & Pot Tracker
+            </h3>
+            <p className="text-slate-300 text-xs mt-1 leading-normal">
+              Set your pool's buy-in entry fee and payment note, then easily track who has paid. Members can view the payment instructions and see their paid status on the leaderboard.
+            </p>
+          </div>
+
+          {/* Financial Summary Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+            {/* Entry Fee */}
+            <div className="bg-slate-800/80 border border-slate-700/60 rounded-xl p-3 flex items-center justify-between">
+              <div>
+                <span className="block text-[10px] uppercase font-mono font-bold text-slate-400">Entry Fee / Player</span>
+                <span className="text-xl font-extrabold text-white font-mono mt-0.5 block">
+                  ${(entryFee || 0).toFixed(2)}
+                </span>
+              </div>
+              <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+                <DollarSign className="w-5 h-5" />
+              </div>
+            </div>
+
+            {/* Total Collected */}
+            <div className="bg-slate-800/80 border border-slate-700/60 rounded-xl p-3 flex items-center justify-between">
+              <div>
+                <span className="block text-[10px] uppercase font-mono font-bold text-slate-400">Total Collected</span>
+                <span className="text-xl font-extrabold text-emerald-400 font-mono mt-0.5 block">
+                  ${totalCollectedAmount.toFixed(2)}
+                </span>
+                <span className="text-[10px] text-slate-500">
+                  of ${totalExpectedAmount.toFixed(2)} expected
+                </span>
+              </div>
+              <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+                <Receipt className="w-5 h-5" />
+              </div>
+            </div>
+
+            {/* Paid Ratio */}
+            <div className="bg-slate-800/80 border border-slate-700/60 rounded-xl p-3 flex items-center justify-between">
+              <div>
+                <span className="block text-[10px] uppercase font-mono font-bold text-slate-400">Paid Members</span>
+                <span className="text-xl font-extrabold text-white font-mono mt-0.5 block">
+                  {paidMembersCount} / {totalMembersCount}
+                </span>
+                <span className="text-[10px] text-emerald-400 font-semibold">
+                  {totalMembersCount > 0 ? Math.round((paidMembersCount / totalMembersCount) * 100) : 0}% Collected
+                </span>
+              </div>
+              <div className="p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400">
+                <Users className="w-5 h-5" />
+              </div>
+            </div>
+
+            {/* Outstanding Unpaid */}
+            <div className="bg-slate-800/80 border border-slate-700/60 rounded-xl p-3 flex items-center justify-between">
+              <div>
+                <span className="block text-[10px] uppercase font-mono font-bold text-slate-400">Outstanding Dues</span>
+                <span className={`text-xl font-extrabold font-mono mt-0.5 block ${outstandingAmount > 0 ? "text-amber-400" : "text-slate-400"}`}>
+                  ${outstandingAmount.toFixed(2)}
+                </span>
+                <span className="text-[10px] text-amber-400 font-semibold">
+                  {unpaidMembersCount} member{unpaidMembersCount !== 1 ? "s" : ""} pending
+                </span>
+              </div>
+              <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400">
+                <AlertCircle className="w-5 h-5" />
+              </div>
+            </div>
+          </div>
+
+          {/* Dues Settings Card */}
+          <div className="bg-slate-800 border border-slate-700/70 rounded-xl p-4 space-y-3">
+            <h4 className="text-white text-xs font-extrabold uppercase tracking-wider flex items-center gap-2 border-b border-slate-700/60 pb-2">
+              <Settings className="w-4 h-4 text-emerald-400" /> Pool Buy-In & Payment Instructions Settings
+            </h4>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-start">
+              <div className="space-y-1">
+                <label className="text-[11px] font-bold text-slate-300 uppercase tracking-wider block">
+                  Buy-In Fee Per Member ($)
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-2.5 text-slate-400 font-bold text-sm">$</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="5"
+                    value={entryFee || ""}
+                    onChange={(e) => setEntryFee(Math.max(0, parseFloat(e.target.value) || 0))}
+                    placeholder="0 (Free Pool)"
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg pl-7 pr-3 py-2 text-white text-sm font-mono font-bold focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+                <p className="text-[10px] text-slate-400">Set to 0 for free pools.</p>
+              </div>
+
+              <div className="md:col-span-2 space-y-1">
+                <label className="text-[11px] font-bold text-slate-300 uppercase tracking-wider block">
+                  Payment Instructions / Note
+                </label>
+                <input
+                  type="text"
+                  value={duesNote}
+                  onChange={(e) => setDuesNote(e.target.value)}
+                  placeholder="e.g. Venmo @commish or CashApp $myname - Due before Week 1!"
+                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-emerald-500"
+                />
+                <p className="text-[10px] text-slate-400">This instruction note will be visible to pool members on their dashboard.</p>
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-1">
+              <button
+                type="button"
+                onClick={handleSaveDuesSettings}
+                disabled={savingDuesSettings}
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg text-xs transition-colors cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+              >
+                <Save className="w-3.5 h-3.5" />
+                {savingDuesSettings ? "Saving Settings..." : "Save Buy-In Settings"}
+              </button>
+            </div>
+          </div>
+
+          {/* Members Dues Tracking Checklist */}
+          <div className="bg-slate-800/90 border border-slate-700/80 rounded-xl p-4 space-y-3">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-slate-700/70 pb-3">
+              <div>
+                <h4 className="text-white text-sm font-extrabold flex items-center gap-2">
+                  <Receipt className="w-4 h-4 text-emerald-400" /> Member Dues Checklist
+                </h4>
+                <p className="text-slate-400 text-xs mt-0.5">
+                  Toggle paid status for each member as they send in their buy-in dues.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                <button
+                  type="button"
+                  onClick={() => handleMarkAll(true)}
+                  className="px-2.5 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center gap-1"
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5" /> Mark All Paid
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleMarkAll(false)}
+                  className="px-2.5 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-400 rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center gap-1"
+                >
+                  <XCircle className="w-3.5 h-3.5" /> Mark All Unpaid
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSavePayments}
+                  disabled={savingDuesStatus}
+                  className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold rounded-lg text-xs shadow-md shadow-emerald-500/10 transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  <Save className="w-3.5 h-3.5" />
+                  {savingDuesStatus ? "Saving..." : "Save Payment Statuses"}
+                </button>
+              </div>
+            </div>
+
+            {/* Search and Filters */}
+            <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-2">
+              <div className="relative flex-grow max-w-md">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                <input
+                  type="text"
+                  value={duesSearch}
+                  onChange={(e) => setDuesSearch(e.target.value)}
+                  placeholder="Search player name..."
+                  className="w-full bg-slate-900 border border-slate-700/80 rounded-lg pl-9 pr-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+
+              <div className="flex bg-slate-900 p-1 rounded-lg border border-slate-700 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setDuesFilter("all")}
+                  className={`px-3 py-1 rounded text-xs font-bold transition-all cursor-pointer ${
+                    duesFilter === "all" ? "bg-emerald-500 text-slate-950 shadow" : "text-slate-400 hover:text-white"
+                  }`}
+                >
+                  All ({members.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDuesFilter("paid")}
+                  className={`px-3 py-1 rounded text-xs font-bold transition-all cursor-pointer ${
+                    duesFilter === "paid" ? "bg-emerald-500 text-slate-950 shadow" : "text-slate-400 hover:text-white"
+                  }`}
+                >
+                  Paid ({paidMembersCount})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDuesFilter("unpaid")}
+                  className={`px-3 py-1 rounded text-xs font-bold transition-all cursor-pointer ${
+                    duesFilter === "unpaid" ? "bg-emerald-500 text-slate-950 shadow" : "text-slate-400 hover:text-white"
+                  }`}
+                >
+                  Unpaid ({unpaidMembersCount})
+                </button>
+              </div>
+            </div>
+
+            {/* Member List */}
+            {loadingMembers ? (
+              <div className="text-center py-8 text-slate-400 text-xs">
+                Loading pool players...
+              </div>
+            ) : filteredMembers.length === 0 ? (
+              <div className="text-center py-8 bg-slate-900/50 border border-slate-800 rounded-xl text-slate-400 text-xs">
+                {duesSearch ? "No members match your search filter." : "No players have submitted picks yet in this pool."}
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-1">
+                {filteredMembers.map((m) => {
+                  const payment = payments[m.userId] || { paid: false };
+                  const isPaid = payment.paid;
+
+                  return (
+                    <div
+                      key={m.userId}
+                      className={`p-3 rounded-xl border transition-all flex flex-col md:flex-row md:items-center justify-between gap-3 ${
+                        isPaid
+                          ? "bg-slate-900/80 border-emerald-500/30"
+                          : "bg-slate-900/40 border-slate-800"
+                      }`}
+                    >
+                      {/* Left: Avatar & Name */}
+                      <div className="flex items-center gap-3">
+                        {m.userPhotoURL ? (
+                          <img
+                            src={m.userPhotoURL}
+                            alt={m.userDisplayName}
+                            className="w-9 h-9 rounded-full border border-slate-700 flex-shrink-0"
+                            referrerPolicy="no-referrer"
+                          />
+                        ) : (
+                          <div className="w-9 h-9 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-xs text-slate-300 flex-shrink-0 uppercase">
+                            {m.userDisplayName.substring(0, 2)}
+                          </div>
+                        )}
+
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-extrabold text-white text-sm">
+                              {m.userDisplayName}
+                            </span>
+                            {isPaid ? (
+                              <span className="px-2 py-0.5 bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[10px] font-bold rounded-md flex items-center gap-1">
+                                <Check className="w-3 h-3" /> Paid ${payment.amount ?? entryFee}
+                              </span>
+                            ) : (
+                              <span className="px-2 py-0.5 bg-amber-500/15 border border-amber-500/30 text-amber-400 text-[10px] font-bold rounded-md flex items-center gap-1">
+                                <AlertCircle className="w-3 h-3" /> Unpaid
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[10px] text-slate-400 mt-0.5">
+                            Picks: <span className="text-slate-300 font-semibold">{m.pickCount} selections</span>
+                            {payment.paidAt && (
+                              <span className="ml-2 text-slate-500">
+                                Paid on {new Date(payment.paidAt).toLocaleDateString()}
+                              </span>
+                            )}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Right: Payment Note & Toggle */}
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 md:w-auto w-full">
+                        <input
+                          type="text"
+                          value={payment.note || ""}
+                          onChange={(e) => handleUpdatePaymentNote(m.userId, e.target.value)}
+                          placeholder="Note (e.g. Venmo, Cash)"
+                          className="bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1 text-xs text-slate-300 placeholder-slate-600 focus:outline-none focus:border-emerald-500 min-w-[140px]"
+                        />
+
+                        <button
+                          type="button"
+                          onClick={() => handleTogglePayment(m.userId)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                            isPaid
+                              ? "bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700"
+                              : "bg-emerald-600 hover:bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/10"
+                          }`}
+                        >
+                          {isPaid ? (
+                            <>
+                              <RotateCcw className="w-3.5 h-3.5 text-slate-400" />
+                              <span>Mark Unpaid</span>
+                            </>
+                          ) : (
+                            <>
+                              <Check className="w-3.5 h-3.5" />
+                              <span>Mark Paid (${entryFee})</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -621,7 +1130,7 @@ export default function AdminTab({ pool, onPoolUpdated, categoryFilter = "all", 
             </div>
           </div>
         </div>
-      ) : (
+      ) : activeTab === "grades" ? (
         // GRADING PANEL
         <div className="space-y-5">
           <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-3">
@@ -842,7 +1351,7 @@ export default function AdminTab({ pool, onPoolUpdated, categoryFilter = "all", 
             </div>
           )}
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

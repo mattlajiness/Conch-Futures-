@@ -41,9 +41,28 @@
         "results": {
           "type": "object",
           "description": "The official results set by the pool creator/admin for grading."
+        },
+        "entryFee": {
+          "type": "number",
+          "description": "The buy-in entry fee for the pool."
+        },
+        "duesNote": {
+          "type": "string",
+          "maxLength": 1000,
+          "description": "Payment instructions for league dues."
+        },
+        "payments": {
+          "type": "object",
+          "description": "Mapping of user IDs to payment status records."
         }
       },
-      "required": ["id", "name", "code", "creatorId", "createdAt"]
+      "required": [
+        "id",
+        "name",
+        "code",
+        "creatorId",
+        "createdAt"
+      ]
     },
     "picks": {
       "title": "Picks",
@@ -73,7 +92,12 @@
           "description": "When the picks were last updated."
         }
       },
-      "required": ["userId", "userDisplayName", "selections", "updatedAt"]
+      "required": [
+        "userId",
+        "userDisplayName",
+        "selections",
+        "updatedAt"
+      ]
     }
   },
   "firestore": {

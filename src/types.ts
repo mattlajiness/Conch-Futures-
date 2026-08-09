@@ -1,3 +1,10 @@
+
+export interface PoolDuesPayment {
+  paid: boolean;
+  paidAt?: any;
+  amount?: number;
+  note?: string;
+}
 export interface Pool {
   id: string;
   name: string;
@@ -11,6 +18,9 @@ export interface Pool {
   tiebreakerResult?: string; // Map of categoryId -> officialWinner
   activeQuestions?: string[]; // Optional active question IDs for this pool
   customPoints?: Record<string, number>; // Optional custom points mapping
+  entryFee?: number;
+  duesNote?: string;
+  payments?: Record<string, PoolDuesPayment>;
 }
 
 export interface Picks {
