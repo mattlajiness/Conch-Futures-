@@ -98,6 +98,7 @@ export default function PoolDetail({ pool: initialPool, user, onBack }: PoolDeta
   const [userPicks, setUserPicks] = useState<Picks | null>(null);
   const [loadingPicks, setLoadingPicks] = useState(true);
   const [activeTab, setActiveTab] = useState<TabType>("standings");
+  const [adminSubTab, setAdminSubTab] = useState<"grades" | "dues" | "config">("grades");
   const [copied, setCopied] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
@@ -362,7 +363,10 @@ export default function PoolDetail({ pool: initialPool, user, onBack }: PoolDeta
           </div>
           {isCreator && (
             <button
-              onClick={() => setActiveTab("admin")}
+              onClick={() => {
+                setActiveTab("admin");
+                setAdminSubTab("dues");
+              }}
               className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-lg border border-slate-700 transition-colors shrink-0 cursor-pointer"
             >
               {(pool.entryFee || 0) > 0 ? "Manage Dues" : "Setup Dues"} &rarr;
@@ -512,6 +516,8 @@ export default function PoolDetail({ pool: initialPool, user, onBack }: PoolDeta
             onPoolUpdated={(updatedPool) => setPool(updatedPool)}
             categoryFilter={categoryFilter}
             nflStandings={nflStandings || undefined}
+            activeSubTab={adminSubTab}
+            onSubTabChange={setAdminSubTab}
           />
         )}
       </div>

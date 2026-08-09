@@ -37,10 +37,15 @@ interface AdminTabProps {
   onPoolUpdated: (updatedPool: Pool) => void;
   categoryFilter?: string;
   nflStandings?: Record<string, TeamStandingInfo>;
+  activeSubTab?: "grades" | "dues" | "config";
+  onSubTabChange?: (tab: "grades" | "dues" | "config") => void;
 }
 
-export default function AdminTab({ pool, onPoolUpdated, categoryFilter = "all", nflStandings }: AdminTabProps) {
-  const [activeTab, setActiveTab] = useState<"grades" | "dues" | "config">("grades");
+export default function AdminTab({ pool, onPoolUpdated, categoryFilter = "all", nflStandings, activeSubTab, onSubTabChange }: AdminTabProps) {
+  const [internalTab, setInternalTab] = useState<"grades" | "dues" | "config">("grades");
+  
+  const activeTab = activeSubTab || internalTab;
+  const setActiveTab = onSubTabChange || setInternalTab;
   
   // Grading state
   const [results, setResults] = useState<Record<string, string>>({});
