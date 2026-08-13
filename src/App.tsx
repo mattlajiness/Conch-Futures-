@@ -8,7 +8,7 @@ import LoginPage from "./components/LoginPage";
 import Logo from "./components/Logo";
 
 export default function App() {
-  const { user, loading, signIn, signOut } = useAuth();
+  const { user, loading, signOut } = useAuth();
   const [selectedPool, setSelectedPool] = useState<Pool | null>(null);
 
   const handleSignOut = async () => {
@@ -27,7 +27,7 @@ export default function App() {
 
   // Not signed in
   if (!user) {
-    return <LoginPage onSignIn={signIn} />;
+    return <LoginPage />;
   }
 
   // Signed in layout
