@@ -28,7 +28,7 @@ import {
   PieChart,
   RotateCcw
 } from "lucide-react";
-import { doc, updateDoc, collection, getDocs } from "firebase/firestore";
+import { doc, updateDoc, collection, getDocs, deleteDoc } from "firebase/firestore";
 import { db, OperationType, handleFirestoreError } from "../lib/firebase";
 import { Pool, PoolDuesPayment } from "../types";
 
@@ -207,6 +207,35 @@ export default function AdminTab({ pool, onPoolUpdated, categoryFilter = "all", 
       handleFirestoreError(err, OperationType.UPDATE, path);
     } finally {
       setSavingDuesSettings(false);
+    }
+  };
+
+  const handleRemoveMember = async (userId: string, userName: string) => {
+    if (!window.confirm(`Are you sure you want to permanently remove ${userName} and all their picks from this pool?`)) return;
+    
+    setMessage(null);
+    try {
+      // Delete the picks document for this user in the current pool
+      await deleteDoc(doc(db, `pools/${pool.id}/picks`, userId));
+      
+      // Update local members state immediately
+      setMembers((prev) => prev.filter(m => m.userId !== userId));
+      
+      // Optionally clean up payment record if it exists
+      if (payments[userId]) {
+        const updatedPayments = { ...payments };
+        delete updatedPayments[userId];
+        setPayments(updatedPayments);
+        await updateDoc(doc(db, `pools/${pool.id}`), {
+          payments: updatedPayments
+        });
+      }
+      
+      setMessage({ type: "success", text: `Successfully removed ${userName} from the pool.` });
+      setTimeout(() => setMessage(null), 4000);
+    } catch (err) {
+      console.error(err);
+      setMessage({ type: "error", text: "Failed to remove member. They might have already been removed." });
     }
   };
 
@@ -837,6 +866,15 @@ export default function AdminTab({ pool, onPoolUpdated, categoryFilter = "all", 
                               <span>Mark Paid (${entryFee})</span>
                             </>
                           )}
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveMember(m.userId, m.userDisplayName)}
+                          className="px-2 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 transition-all cursor-pointer flex items-center justify-center shrink-0"
+                          title={`Remove ${m.userDisplayName}`}
+                        >
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
                     </div>

@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import { FUTURES_QUESTIONS, NFL_TEAMS_ALL, AFC_TEAMS, NFC_TEAMS, NFL_WIN_TOTALS } from "../constants";
 import { Save, Check, Award, Compass, ShieldAlert, Zap, ListOrdered, GripVertical, Trophy, ChevronRight, ChevronLeft, ChevronUp, ChevronDown } from "lucide-react";
-import { doc, setDoc, serverTimestamp } from "firebase/firestore";
-import { CheckCircle2, Loader2 } from "lucide-react";
+import { doc, setDoc, serverTimestamp, collectionGroup, query, where, getDocs, getDoc } from "firebase/firestore";
+import { CheckCircle2, Loader2, Copy } from "lucide-react";
 import { db, OperationType, handleFirestoreError } from "../lib/firebase";
 import { AuthUser } from "../lib/auth";
 import { Picks, Pool } from "../types";
@@ -42,6 +42,11 @@ export default function PicksTab({ pool, user, userPicks, onPicksSaved, nflStand
   const [lastAutosaveTime, setLastAutosaveTime] = useState<Date | null>(null);
   const autosaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isFirstLoad = useRef(true);
+  
+  // Copy picks state
+  const [showCopyModal, setShowCopyModal] = useState(false);
+  const [otherPoolPicks, setOtherPoolPicks] = useState<{poolId: string; poolName: string; selections: Record<string, string>; tiebreaker?: string}[]>([]);
+  const [loadingOtherPicks, setLoadingOtherPicks] = useState(false);
 
   const activeQuestionsList = FUTURES_QUESTIONS;
   const standingsQuestions = activeQuestionsList.filter((q) => q.category === "standings");
@@ -56,6 +61,49 @@ export default function PicksTab({ pool, user, userPicks, onPicksSaved, nflStand
     return q.options.map((o) => "");
   };
   
+  const fetchOtherPicks = async () => {
+    setLoadingOtherPicks(true);
+    try {
+      const q = query(collectionGroup(db, "picks"), where("userId", "==", user.uid));
+      const querySnapshot = await getDocs(q);
+      const otherPicks: {poolId: string; poolName: string; selections: Record<string, string>; tiebreaker?: string}[] = [];
+      
+      for (const docSnap of querySnapshot.docs) {
+        // Doc path is pools/{poolId}/picks/{userId}
+        const poolId = docSnap.ref.parent.parent?.id;
+        if (poolId && poolId !== pool.id) {
+          const poolSnap = await getDoc(doc(db, "pools", poolId));
+          if (poolSnap.exists()) {
+            otherPicks.push({
+              poolId,
+              poolName: poolSnap.data().name || "Unknown Pool",
+              selections: docSnap.data().selections || {},
+              tiebreaker: docSnap.data().tiebreaker
+            });
+          }
+        }
+      }
+      setOtherPoolPicks(otherPicks);
+    } catch (err) {
+      console.error("Error fetching other picks:", err);
+    } finally {
+      setLoadingOtherPicks(false);
+    }
+  };
+
+  const handleCopyPicks = (otherSelections: Record<string, string>, otherTiebreaker?: string) => {
+    const newSelections = { ...selections };
+    Object.entries(otherSelections).forEach(([key, val]) => {
+      // For pools, we should just copy it if it's a valid key
+      newSelections[key] = val;
+    });
+    setSelections(newSelections);
+    if (otherTiebreaker) {
+      setTiebreaker(otherTiebreaker);
+    }
+    setShowCopyModal(false);
+  };
+
   const isStepComplete = (step: any, sels = selections, tbreak = tiebreaker) => {
     if (step.category === 'standings') {
       const q = activeQuestionsList.find(q => q.id === step.id);
@@ -272,6 +320,63 @@ export default function PicksTab({ pool, user, userPicks, onPicksSaved, nflStand
 
   return (
     <div className="bg-[#09222c] border border-[#113a4b]/80 rounded-2xl p-4 sm:p-6 shadow-xl relative min-h-[600px] flex flex-col">
+      {/* Header with Copy Picks */}
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-lg font-extrabold text-white">Your Picks</h2>
+        <button
+          onClick={() => {
+            setShowCopyModal(true);
+            if (otherPoolPicks.length === 0) fetchOtherPicks();
+          }}
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded-lg text-xs font-bold transition-colors"
+        >
+          <Copy className="w-4 h-4" /> Copy from another pool
+        </button>
+      </div>
+
+      {/* Copy Picks Modal */}
+      {showCopyModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-900 border border-slate-700 rounded-xl p-5 max-w-md w-full shadow-2xl">
+            <h3 className="text-lg font-bold text-white mb-4">Copy Picks</h3>
+            {loadingOtherPicks ? (
+              <div className="text-center py-6 text-slate-400 text-sm flex items-center justify-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin" /> Searching your other pools...
+              </div>
+            ) : otherPoolPicks.length === 0 ? (
+              <div className="text-center py-6 text-slate-400 text-sm">
+                No picks found in other pools.
+              </div>
+            ) : (
+              <div className="space-y-3 max-h-60 overflow-y-auto pr-2">
+                {otherPoolPicks.map((p) => (
+                  <div key={p.poolId} className="bg-slate-800 border border-slate-700 rounded-lg p-3 flex justify-between items-center">
+                    <div>
+                      <div className="text-sm font-bold text-white">{p.poolName}</div>
+                      <div className="text-xs text-slate-400">{Object.keys(p.selections).length} picks made</div>
+                    </div>
+                    <button
+                      onClick={() => handleCopyPicks(p.selections, p.tiebreaker)}
+                      className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg transition-colors"
+                    >
+                      Copy
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="mt-5 flex justify-end">
+              <button
+                onClick={() => setShowCopyModal(false)}
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-sm font-bold rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Pizza Tracker */}
       <div className="mb-6">
         <div 
