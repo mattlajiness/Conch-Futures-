@@ -523,7 +523,7 @@ export default function AdminTab({ pool, onPoolUpdated, categoryFilter = "all", 
               : "border-transparent text-slate-400 hover:text-slate-200"
           }`}
         >
-          <CircleDollarSign className="w-4 h-4 text-emerald-400" /> League Dues
+          <CircleDollarSign className="w-4 h-4 text-emerald-400" /> Manage Members
           {unpaidMembersCount > 0 && (entryFee || 0) > 0 && (
             <span className="ml-1 px-1.5 py-0.5 bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded-full text-[10px] font-mono">
               {unpaidMembersCount} Unpaid
@@ -563,7 +563,7 @@ export default function AdminTab({ pool, onPoolUpdated, categoryFilter = "all", 
         <div className="space-y-4">
           <div className="bg-gradient-to-r from-emerald-950/60 to-slate-900 border border-emerald-500/20 rounded-2xl p-3.5">
             <h3 className="font-bold text-emerald-400 text-sm flex items-center gap-2">
-              <CircleDollarSign className="w-5 h-5 text-emerald-400" /> League Dues & Pot Tracker
+              <CircleDollarSign className="w-5 h-5 text-emerald-400" /> Manage Manage Members & Pot Tracker
             </h3>
             <p className="text-slate-300 text-xs mt-1 leading-normal">
               Set your pool's buy-in entry fee and payment note, then easily track who has paid. Members can view the payment instructions and see their paid status on the leaderboard.

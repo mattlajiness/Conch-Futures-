@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { collection, getDocs } from "firebase/firestore";
+import { collection, getDocs, deleteDoc, doc } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import { AuthUser } from "../lib/auth";
 import { FUTURES_QUESTIONS, NFL_WIN_TOTALS } from "../constants";
 import { Pool, Picks, StandingRow } from "../types";
-import { Medal, Check, X, ShieldAlert, Award, AlertCircle, RefreshCw, Crown, TrendingUp, Users } from "lucide-react";
+import { Medal, Check, X, ShieldAlert, Award, AlertCircle, RefreshCw, Crown, TrendingUp, Users, Trash2 } from "lucide-react";
 import { TeamStandingInfo } from "../lib/nflApi";
 
 interface StandingsTabProps {
@@ -342,6 +342,7 @@ export default function StandingsTab({ pool, user, userPicks, categoryFilter = "
                           {row.score} <span className="text-[10px] font-semibold text-slate-500 uppercase">PTS</span>
                         </span>
                       </div>
+
                     </div>
                   </div>
                 );
