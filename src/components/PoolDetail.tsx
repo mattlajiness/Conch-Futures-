@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { ArrowLeft, Award, Users, Save, Sparkles, Settings, Copy, Check, Share2, RefreshCw, Search, History, Clock, Timer, CircleDollarSign } from "lucide-react";
+import { ArrowLeft, Award, Users, Save, MessageSquare, Sparkles, Settings, Copy, Check, Share2, RefreshCw, Search, History, Clock, Timer, CircleDollarSign } from "lucide-react";
 import { Pool, Picks } from "../types";
 import { doc, getDoc, onSnapshot } from "firebase/firestore";
 import { db } from "../lib/firebase";
@@ -8,6 +8,7 @@ import StandingsTab from "./StandingsTab";
 import PicksTab from "./PicksTab";
 import ComparePicksTab from "./ComparePicksTab";
 import AdminTab from "./AdminTab";
+import ChatTab from "./ChatTab";
 import LastYearResultsTab from "./LastYearResultsTab";
 import { fetchNflStandings, TeamStandingInfo } from "../lib/nflApi";
 import { FUTURES_QUESTIONS } from "../constants";
@@ -18,7 +19,7 @@ interface PoolDetailProps {
   onBack: () => void;
 }
 
-type TabType = "standings" | "my_picks" | "compare" | "admin" | "last_year";
+type TabType = "standings" | "my_picks" | "compare" | "admin" | "last_year" | "chat";
 
 export function getAppShareUrl(code: string): string {
   const defaultPublicUrl = "https://ais-pre-xfiomcrem6vpcrlcdoi546-387114323884.us-east1.run.app";
@@ -433,6 +434,17 @@ export default function PoolDetail({ pool: initialPool, user, onBack }: PoolDeta
             <Settings className="w-4 h-4" /> Admin Controls
           </button>
         )}
+        
+        <button
+          onClick={() => setActiveTab("chat")}
+          className={`px-2 py-1.5 rounded-t-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer ${
+            activeTab === "chat"
+              ? "bg-slate-800 text-emerald-400 border-b-2 border-emerald-500"
+              : "text-slate-400 hover:text-slate-200"
+          }`}
+        >
+          <MessageSquare className="w-4 h-4" /> Chat
+        </button>
       </div>
 
       
@@ -457,7 +469,7 @@ export default function PoolDetail({ pool: initialPool, user, onBack }: PoolDeta
         </div>
       )}
 
-      {activeTab !== "my_picks" && activeTab !== "admin" && activeTab !== "last_year" && (
+      {activeTab !== "my_picks" && activeTab !== "admin" && activeTab !== "last_year" && activeTab !== "chat" && (
       <div id="category-filter-bar" className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 bg-slate-900 border border-slate-800 p-3 rounded-xl mb-2 shadow-inner">
         <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider font-mono flex items-center gap-1.5">
           <Sparkles className="w-3.5 h-3.5 text-emerald-400" /> Filter Futures:
@@ -509,6 +521,10 @@ export default function PoolDetail({ pool: initialPool, user, onBack }: PoolDeta
         {activeTab === "compare" && <ComparePicksTab pool={pool} categoryFilter={categoryFilter} nflStandings={nflStandings || undefined} />}
 
         {activeTab === "last_year" && <LastYearResultsTab />}
+
+        {activeTab === "chat" && (
+          <ChatTab pool={pool} user={user} />
+        )}
 
         {activeTab === "admin" && isCreator && (
           <AdminTab

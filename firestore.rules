@@ -76,6 +76,14 @@ service cloud.firestore {
         allow delete: if isSignedIn()
                       && (userId == request.auth.uid || get(/databases/$(database)/documents/pools/$(poolId)).data.creatorId == request.auth.uid);
       }
+      match /messages/{messageId} {
+        allow read: if isSignedIn();
+        allow create: if isSignedIn()
+                      && request.resource.data.userId == request.auth.uid
+                      && request.resource.data.text is string
+                      && request.resource.data.text.size() > 0
+                      && request.resource.data.text.size() <= 1000;
+      }
     }
   }
 }
