@@ -21,6 +21,7 @@ export interface Pool {
   entryFee?: number;
   duesNote?: string;
   payments?: Record<string, PoolDuesPayment>;
+  coAdmins?: string[];
 }
 
 export interface Picks {

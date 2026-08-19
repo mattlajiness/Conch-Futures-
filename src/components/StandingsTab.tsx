@@ -218,7 +218,7 @@ export default function StandingsTab({ pool, user, userPicks, categoryFilter = "
                     Current Leader
                   </span>
                   <span className="block font-extrabold text-white text-sm truncate">
-                    {leadersList.map((l) => l.userDisplayName).join(", ")}
+                    {topScore === 0 ? "TBD" : leadersList.map((l) => l.userDisplayName).join(", ")}
                   </span>
                   <span className="block text-xs font-semibold text-amber-400 font-mono mt-0.5">
                     {topScore} PTS
@@ -304,10 +304,17 @@ export default function StandingsTab({ pool, user, userPicks, categoryFilter = "
                       )}
 
                       <div className="truncate">
+
                         <span className="font-bold text-white text-sm block sm:inline truncate">
                           {row.userDisplayName}
                         </span>
+                        {(pool.creatorId === row.userId || pool.coAdmins?.includes(row.userId)) && (
+                          <span className="ml-1 sm:ml-2 bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">
+                            Admin
+                          </span>
+                        )}
                         {isCurrentUser && (
+
                           <span className="ml-0 sm:ml-2 text-[10px] bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 rounded font-medium">
                             You
                           </span>

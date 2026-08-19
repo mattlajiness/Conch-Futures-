@@ -96,16 +96,6 @@ export default function ChatTab({ pool, user }: ChatTabProps) {
             return (
               <div key={msg.id} className={`flex ${isMe ? "justify-end" : "justify-start"} mb-2`}>
                 <div className={`flex flex-col max-w-[80%] ${isMe ? "items-end" : "items-start"}`}>
-                  <div className="flex items-center gap-2 mb-1">
-                    {!isMe && (
-                      <span className="text-[10px] font-bold text-slate-400 ml-1">
-                        {msg.userDisplayName}
-                      </span>
-                    )}
-                    <span className="text-[9px] text-slate-500">
-                      {formatTime(msg.createdAt)}
-                    </span>
-                  </div>
                   <div 
                     className={`px-3 py-2 rounded-2xl text-sm ${
                       isMe 
@@ -114,6 +104,16 @@ export default function ChatTab({ pool, user }: ChatTabProps) {
                     }`}
                   >
                     {msg.text}
+                  </div>
+                  <div className="flex items-center gap-2 mt-1 mx-1">
+                    {!isMe && (
+                      <span className="text-[10px] font-bold text-slate-400">
+                        {msg.userDisplayName}
+                      </span>
+                    )}
+                    <span className="text-[9px] text-slate-500">
+                      {formatTime(msg.createdAt)}
+                    </span>
                   </div>
                 </div>
               </div>

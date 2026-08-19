@@ -229,7 +229,7 @@ export default function PoolDetail({ pool: initialPool, user, onBack }: PoolDeta
     }
   };
 
-  const isCreator = pool.creatorId === user.uid;
+  const isCreator = pool.creatorId === user.uid || (pool.coAdmins && pool.coAdmins.includes(user.uid));
 
   const totalQuestions = FUTURES_QUESTIONS.length;
   const completedPicksCount = userPicks?.selections 

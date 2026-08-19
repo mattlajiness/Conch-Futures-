@@ -26,7 +26,8 @@ import {
   Edit3,
   Receipt,
   PieChart,
-  RotateCcw
+  RotateCcw,
+  Shield
 } from "lucide-react";
 import { doc, updateDoc, collection, getDocs, deleteDoc } from "firebase/firestore";
 import { db, OperationType, handleFirestoreError } from "../lib/firebase";
@@ -207,6 +208,36 @@ export default function AdminTab({ pool, onPoolUpdated, categoryFilter = "all", 
       handleFirestoreError(err, OperationType.UPDATE, path);
     } finally {
       setSavingDuesSettings(false);
+    }
+  };
+
+
+  const handleToggleAdmin = async (userId: string, userName: string, isCurrentlyAdmin: boolean) => {
+    setMessage(null);
+    try {
+      const newCoAdmins = [...(pool.coAdmins || [])];
+      
+      if (isCurrentlyAdmin) {
+        
+        const index = newCoAdmins.indexOf(userId);
+        if (index > -1) newCoAdmins.splice(index, 1);
+      } else {
+        
+        newCoAdmins.push(userId);
+      }
+      
+      await updateDoc(doc(db, `pools/${pool.id}`), {
+        coAdmins: newCoAdmins
+      });
+      
+      onPoolUpdated({ ...pool, coAdmins: newCoAdmins });
+      setMessage({ type: "success", text: `Successfully ${isCurrentlyAdmin ? 'removed' : 'added'} ${userName} as an admin.` });
+      
+      // Auto dismiss message
+      setTimeout(() => setMessage(null), 3000);
+    } catch (err) {
+      console.error("Failed to update admins:", err);
+      setMessage({ type: "error", text: "Failed to update admin permissions." });
     }
   };
 
@@ -563,10 +594,10 @@ export default function AdminTab({ pool, onPoolUpdated, categoryFilter = "all", 
         <div className="space-y-4">
           <div className="bg-gradient-to-r from-emerald-950/60 to-slate-900 border border-emerald-500/20 rounded-2xl p-3.5">
             <h3 className="font-bold text-emerald-400 text-sm flex items-center gap-2">
-              <CircleDollarSign className="w-5 h-5 text-emerald-400" /> Manage Manage Members & Pot Tracker
+              <CircleDollarSign className="w-5 h-5 text-emerald-400" /> Manage Members & Pot Tracker
             </h3>
             <p className="text-slate-300 text-xs mt-1 leading-normal">
-              Set your pool's buy-in entry fee and payment note, then easily track who has paid. Members can view the payment instructions and see their paid status on the leaderboard.
+              Set your pool's buy-in entry fee and payment note, then easily track who has paid. You can also click the shield icon next to a member's name in the checklist below to promote them to Co-Admin.
             </p>
           </div>
 
@@ -696,7 +727,7 @@ export default function AdminTab({ pool, onPoolUpdated, categoryFilter = "all", 
                   <Receipt className="w-4 h-4 text-emerald-400" /> Member Dues Checklist
                 </h4>
                 <p className="text-slate-400 text-xs mt-0.5">
-                  Toggle paid status for each member as they send in their buy-in dues.
+                  Toggle paid status for each member. Click the shield icon next to a member's name to promote them to Co-Admin.
                 </p>
               </div>
 
@@ -868,6 +899,21 @@ export default function AdminTab({ pool, onPoolUpdated, categoryFilter = "all", 
                           )}
                         </button>
 
+
+                        {m.userId !== pool.creatorId && (
+                          <button
+                            type="button"
+                            onClick={() => handleToggleAdmin(m.userId, m.userDisplayName, pool.coAdmins?.includes(m.userId) || false)}
+                            className={`px-2 py-1.5 rounded-lg border transition-all cursor-pointer flex items-center justify-center shrink-0 ${
+                              pool.coAdmins?.includes(m.userId)
+                                ? "bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border-amber-500/30"
+                                : "bg-slate-800 hover:bg-slate-700 text-slate-400 border-slate-700"
+                            }`}
+                            title={pool.coAdmins?.includes(m.userId) ? `Remove Admin Access from ${m.userDisplayName}` : `Make ${m.userDisplayName} an Admin`}
+                          >
+                            <Shield className="w-4 h-4" />
+                          </button>
+                        )}
                         <button
                           type="button"
                           onClick={() => handleRemoveMember(m.userId, m.userDisplayName)}
