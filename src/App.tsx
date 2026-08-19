@@ -53,33 +53,15 @@ export default function App() {
             </span>
           </div>
 
-          <div className="flex items-center gap-4">
-            {/* User Profile summary */}
-            <div className="hidden sm:flex items-center gap-2.5 bg-slate-800/40 px-3 py-1.5 rounded-lg border border-slate-800">
-              {user.photoURL ? (
-                <img
-                  src={user.photoURL}
-                  alt={user.displayName}
-                  className="w-5 h-5 rounded-full border border-slate-700"
-                  referrerPolicy="no-referrer"
-                />
-              ) : (
-                <div className="w-5 h-5 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-[9px] text-slate-300 uppercase">
-                  {user.displayName?.charAt(0)}
-                </div>
-              )}
-              <span className="text-slate-300 text-xs font-semibold max-w-[120px] truncate">
-                {user.displayName || "User"}
-              </span>
-            </div>
-
+          <div className="flex items-center gap-2 sm:gap-3">
             {/* Logout button */}
             <button
               onClick={handleSignOut}
-              className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-lg border border-slate-800 hover:border-slate-700 transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg border border-slate-700/80 hover:border-slate-600 transition-colors text-xs font-semibold cursor-pointer"
               title="Sign Out"
             >
-              <LogOut className="w-4 h-4" />
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Sign Out</span>
             </button>
           </div>
         </div>

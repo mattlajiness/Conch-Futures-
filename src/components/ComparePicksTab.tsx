@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "../lib/firebase";
+import { useAuth } from "../lib/auth";
 import { FUTURES_QUESTIONS } from "../constants";
 import { Pool, Picks } from "../types";
 import { Users, PieChart, ShieldAlert, CheckCircle2, Award, RefreshCw } from "lucide-react";
@@ -13,6 +14,7 @@ interface ComparePicksTabProps {
 }
 
 export default function ComparePicksTab({ pool, categoryFilter = "all", nflStandings }: ComparePicksTabProps) {
+  const { user } = useAuth();
   const [allPicks, setAllPicks] = useState<Picks[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -67,7 +69,7 @@ export default function ComparePicksTab({ pool, categoryFilter = "all", nflStand
   const selectedQuestion = activeQuestionsList.find((q) => q.id === selectedQuestionId) || filteredQuestions[0] || activeQuestionsList[0] || FUTURES_QUESTIONS[0];
 
   // Calculate statistics for the selected question
-  const stats: Record<string, { count: number; percentage: number; users: string[] }> = {};
+  const stats: Record<string, { count: number; percentage: number; users: { name: string; photoURL?: string }[] }> = {};
   let totalResponses = 0;
 
   if (selectedQuestion.category !== "standings") {
@@ -85,7 +87,10 @@ export default function ComparePicksTab({ pool, categoryFilter = "all", nflStand
         stats[pickValue] = { count: 0, percentage: 0, users: [] };
       }
       stats[pickValue].count += 1;
-      stats[pickValue].users.push(p.userDisplayName);
+      const isCurrentAuthUser = user && p.userId === user.uid;
+      const userPhoto = (isCurrentAuthUser && user.photoURL) ? user.photoURL : (p.userPhotoURL || "");
+      const userName = (isCurrentAuthUser && user.displayName) ? user.displayName : (p.userDisplayName || "Player");
+      stats[pickValue].users.push({ name: userName, photoURL: userPhoto });
     }
   });
 
@@ -240,12 +245,24 @@ export default function ComparePicksTab({ pool, categoryFilter = "all", nflStand
 
                         {/* Users List inline tags */}
                         <div className="flex flex-wrap gap-1.5 pt-1">
-                          {item.users.map((uname, index) => (
+                          {item.users.map((u, index) => (
                             <span
                               key={index}
-                              className="text-[9px] font-semibold text-slate-400 bg-slate-900 border border-slate-700/40 px-2 py-0.5 rounded"
+                              className="text-[10px] font-semibold text-slate-300 bg-slate-900 border border-slate-700/40 px-2 py-0.5 rounded-md flex items-center gap-1.5"
                             >
-                              {uname}
+                              {u.photoURL ? (
+                                <img
+                                  src={u.photoURL}
+                                  alt={u.name}
+                                  className="w-3.5 h-3.5 rounded-full bg-slate-950 p-0.2 object-contain flex-shrink-0"
+                                  referrerPolicy="no-referrer"
+                                />
+                              ) : (
+                                <div className="w-3.5 h-3.5 rounded-full bg-slate-800 text-[8px] font-bold text-slate-400 flex items-center justify-center uppercase flex-shrink-0">
+                                  {u.name?.charAt(0)}
+                                </div>
+                              )}
+                              <span>{u.name}</span>
                             </span>
                           ))}
                         </div>
@@ -316,13 +333,27 @@ export default function ComparePicksTab({ pool, categoryFilter = "all", nflStand
                   return (
                     <div
                       key={pick.userId}
-                      className="p-3 bg-slate-900/60 rounded-xl border border-slate-700/20 flex justify-between items-center"
+                      className="p-2.5 bg-slate-900/60 rounded-xl border border-slate-700/20 flex justify-between items-center"
                     >
-                      <div className="min-w-0 flex-1 pr-2">
-                        <span className="text-xs font-bold text-slate-300 block truncate">{pick.userDisplayName}</span>
-                        <span className={`text-[11px] font-semibold block ${userChoice ? "text-white" : "text-slate-600 italic"}`}>
-                          {label}
-                        </span>
+                      <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-2">
+                        {pick.userPhotoURL ? (
+                          <img
+                            src={pick.userPhotoURL}
+                            alt={pick.userDisplayName}
+                            className="w-7 h-7 rounded-full bg-slate-950 p-0.5 border border-slate-700 object-contain flex-shrink-0 shadow-sm"
+                            referrerPolicy="no-referrer"
+                          />
+                        ) : (
+                          <div className="w-7 h-7 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-[9px] text-slate-300 uppercase flex-shrink-0">
+                            {pick.userDisplayName?.substring(0, 2)}
+                          </div>
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <span className="text-xs font-bold text-slate-300 block truncate">{pick.userDisplayName}</span>
+                          <span className={`text-[11px] font-semibold block truncate ${userChoice ? "text-white" : "text-slate-600 italic"}`}>
+                            {label}
+                          </span>
+                        </div>
                       </div>
                       <div className="flex-shrink-0">
                         {displayStatus}

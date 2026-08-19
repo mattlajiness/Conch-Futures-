@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { collection, query, where, getDocs, doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
-import { Trophy, Plus, LogIn, Lock, Users, ArrowRight, AlertCircle, Sparkles, Heart, Activity, UserPlus, CheckCircle2 } from "lucide-react";
+import { Trophy, Plus, LogIn, Lock, Users, ArrowRight, AlertCircle, Sparkles, Heart, Activity, UserPlus, CheckCircle2, Edit3, Shield } from "lucide-react";
 import { db, OperationType, handleFirestoreError } from "../lib/firebase";
 import { AuthUser } from "../lib/auth";
 import { FUTURES_QUESTIONS } from "../constants";
@@ -324,7 +324,7 @@ export default function PoolSelector({ user, onSelectPool }: PoolSelectorProps) 
             Welcome to the <br/>
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-cyan-400">Conch Predictor Series</span>
           </h1>
-          <p className="text-slate-300 text-sm sm:text-base leading-relaxed mb-6">
+          <p className="text-slate-300 text-sm sm:text-base leading-relaxed">
             Select a pool below to get started, or create a new one to invite your friends.
           </p>
         </div>

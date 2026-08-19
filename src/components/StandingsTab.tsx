@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { collection, getDocs, deleteDoc, doc } from "firebase/firestore";
+import { collection, getDocs, deleteDoc, doc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import { AuthUser } from "../lib/auth";
 import { FUTURES_QUESTIONS, NFL_WIN_TOTALS } from "../constants";
 import { Pool, Picks, StandingRow } from "../types";
-import { Medal, Check, X, ShieldAlert, Award, AlertCircle, RefreshCw, Crown, TrendingUp, Users, Trash2 } from "lucide-react";
+import { Medal, Check, X, ShieldAlert, Award, AlertCircle, RefreshCw, Crown, TrendingUp, Users, Trash2, Edit3, Sparkles } from "lucide-react";
 import { TeamStandingInfo } from "../lib/nflApi";
+import ProfileCustomizerModal from "./ProfileCustomizerModal";
 
 interface StandingsTabProps {
   pool: Pool;
@@ -20,6 +21,7 @@ export default function StandingsTab({ pool, user, userPicks, categoryFilter = "
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedUser, setSelectedUser] = useState<StandingRow | null>(null);
+  const [isCustomizerOpen, setIsCustomizerOpen] = useState(false);
 
   const getPoints = (qId: string, defaultPoints: number) => {
     return pool.customPoints?.[qId] !== undefined ? pool.customPoints[qId] : defaultPoints;
@@ -116,10 +118,23 @@ export default function StandingsTab({ pool, user, userPicks, categoryFilter = "
           tiebreakerDiff = Math.abs(Number(pick.tiebreaker) - Number(pool.tiebreakerResult));
         }
 
+        const isCurrentAuthUser = pick.userId === user.uid;
+        const resolvedPhotoURL = (isCurrentAuthUser && user.photoURL) ? user.photoURL : (pick.userPhotoURL || "");
+        const resolvedDisplayName = (isCurrentAuthUser && user.displayName) ? user.displayName : (pick.userDisplayName || "Anonymous Player");
+
+        // Self-heal: If this pool's pick has a blank or outdated photoURL for the current user, update it
+        if (isCurrentAuthUser && user.photoURL && pick.userPhotoURL !== user.photoURL) {
+          updateDoc(doc(db, `pools/${pool.id}/picks`, user.uid), {
+            userPhotoURL: user.photoURL,
+            userDisplayName: resolvedDisplayName,
+            updatedAt: serverTimestamp(),
+          }).catch(console.debug);
+        }
+
         return {
           userId: pick.userId,
-          userDisplayName: pick.userDisplayName || "Anonymous Player",
-          userPhotoURL: pick.userPhotoURL,
+          userDisplayName: resolvedDisplayName,
+          userPhotoURL: resolvedPhotoURL,
           score,
           correctCount,
           totalPicks,
@@ -210,9 +225,20 @@ export default function StandingsTab({ pool, user, userPicks, categoryFilter = "
                 id="leaderboard-kpi-leader-card"
                 className="bg-slate-850 border border-slate-800/80 rounded-xl p-2.5 flex items-center gap-3"
               >
-                <div className="w-10 h-10 rounded-lg bg-amber-500/10 border border-amber-500/25 flex items-center justify-center flex-shrink-0">
-                  <Crown className="w-5 h-5 text-amber-400" />
-                </div>
+                {leadersList.length > 0 && leadersList[0].userPhotoURL ? (
+                  <div className="w-10 h-10 rounded-lg bg-slate-950 p-1 border border-amber-500/30 flex items-center justify-center flex-shrink-0 shadow-sm">
+                    <img
+                      src={leadersList[0].userPhotoURL}
+                      alt="Leader Logo"
+                      className="w-full h-full object-contain"
+                      referrerPolicy="no-referrer"
+                    />
+                  </div>
+                ) : (
+                  <div className="w-10 h-10 rounded-lg bg-amber-500/10 border border-amber-500/25 flex items-center justify-center flex-shrink-0">
+                    <Crown className="w-5 h-5 text-amber-400" />
+                  </div>
+                )}
                 <div className="min-w-0 flex-grow">
                   <span className="block text-[9px] text-slate-500 font-mono uppercase tracking-wider">
                     Current Leader
@@ -294,7 +320,7 @@ export default function StandingsTab({ pool, user, userPicks, categoryFilter = "
                         <img
                           src={row.userPhotoURL}
                           alt={row.userDisplayName}
-                          className="w-8 h-8 rounded-full border border-slate-700 flex-shrink-0"
+                          className="w-8 h-8 rounded-full bg-slate-950 p-0.5 border border-slate-700 object-contain flex-shrink-0 shadow-sm"
                           referrerPolicy="no-referrer"
                         />
                       ) : (
@@ -304,30 +330,41 @@ export default function StandingsTab({ pool, user, userPicks, categoryFilter = "
                       )}
 
                       <div className="truncate">
-
-                        <span className="font-bold text-white text-sm block sm:inline truncate">
-                          {row.userDisplayName}
-                        </span>
-                        {(pool.creatorId === row.userId || pool.coAdmins?.includes(row.userId)) && (
-                          <span className="ml-1 sm:ml-2 bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">
-                            Admin
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="font-bold text-white text-sm truncate">
+                            {row.userDisplayName}
                           </span>
-                        )}
-                        {isCurrentUser && (
-
-                          <span className="ml-0 sm:ml-2 text-[10px] bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 rounded font-medium">
-                            You
-                          </span>
-                        )}
-                        {(pool.entryFee || 0) > 0 && (
-                          <span className={`ml-1.5 text-[10px] px-1.5 py-0.5 rounded font-semibold border ${
-                            pool.payments?.[row.userId]?.paid
-                              ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/20"
-                              : "bg-amber-500/10 text-amber-400/80 border-amber-500/20"
-                          }`}>
-                            {pool.payments?.[row.userId]?.paid ? "✓ Paid" : "Unpaid"}
-                          </span>
-                        )}
+                          {(pool.creatorId === row.userId || pool.coAdmins?.includes(row.userId)) && (
+                            <span className="bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">
+                              Admin
+                            </span>
+                          )}
+                          {isCurrentUser && (
+                            <span className="text-[10px] bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 rounded font-medium inline-flex items-center gap-1">
+                              You
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setIsCustomizerOpen(true);
+                                }}
+                                className="text-emerald-300 hover:text-white underline text-[9px] ml-0.5"
+                                title="Personalize team logo & name"
+                              >
+                                (Edit Logo)
+                              </button>
+                            </span>
+                          )}
+                          {(pool.entryFee || 0) > 0 && (
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold border ${
+                              pool.payments?.[row.userId]?.paid
+                                ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/20"
+                                : "bg-amber-500/10 text-amber-400/80 border-amber-500/20"
+                            }`}>
+                              {pool.payments?.[row.userId]?.paid ? "✓ Paid" : "Unpaid"}
+                            </span>
+                          )}
+                        </div>
                         <span className="sm:hidden block text-[10px] text-slate-400 mt-0.5">
                           {row.correctCount} correct • {Object.keys(row.picks).length} made
                         </span>
@@ -372,16 +409,16 @@ export default function StandingsTab({ pool, user, userPicks, categoryFilter = "
                 <img
                   src={selectedUser.userPhotoURL}
                   alt={selectedUser.userDisplayName}
-                  className="w-10 h-10 rounded-full border border-slate-600"
+                  className="w-10 h-10 rounded-full bg-slate-950 p-1 border border-slate-600 object-contain flex-shrink-0 shadow-sm"
                   referrerPolicy="no-referrer"
                 />
               ) : (
-                <div className="w-10 h-10 rounded-full bg-slate-900 border border-slate-700 flex items-center justify-center font-bold text-slate-300">
+                <div className="w-10 h-10 rounded-full bg-slate-900 border border-slate-700 flex items-center justify-center font-bold text-slate-300 flex-shrink-0">
                   {selectedUser.userDisplayName.substr(0, 2).toUpperCase()}
                 </div>
               )}
-              <div>
-                <h3 className="font-extrabold text-white text-base leading-tight">
+              <div className="min-w-0 flex-1">
+                <h3 className="font-extrabold text-white text-base leading-tight truncate">
                   {selectedUser.userDisplayName}
                 </h3>
                 <span className="text-xs text-emerald-400 font-bold">
@@ -531,6 +568,14 @@ export default function StandingsTab({ pool, user, userPicks, categoryFilter = "
           </div>
         )}
       </div>
+
+      {/* Profile & Logo Customizer Modal */}
+      <ProfileCustomizerModal
+        isOpen={isCustomizerOpen}
+        onClose={() => setIsCustomizerOpen(false)}
+        currentPoolId={pool.id}
+        onUpdated={fetchStandings}
+      />
     </div>
   );
 }

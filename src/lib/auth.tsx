@@ -11,6 +11,7 @@ import {
   User as FirebaseUser,
 } from "firebase/auth";
 import { auth } from "./firebase";
+import { syncUserProfileAcrossAllPools } from "./profileSync";
 
 export interface AuthUser {
   uid: string;
@@ -38,6 +39,7 @@ interface AuthContextValue {
   signUpWithEmail: (email: string, password: string, displayName?: string) => Promise<void>;
   sendPasswordReset: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
+  updateUserProfile: (displayName: string, photoURL: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -89,6 +91,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const updateUserProfile = async (displayName: string, photoURL: string) => {
+    if (!auth.currentUser) return;
+    const cleanName = displayName.trim() || auth.currentUser.email?.split("@")[0] || "Player";
+    const cleanPhoto = photoURL.trim();
+    await updateProfile(auth.currentUser, {
+      displayName: cleanName,
+      photoURL: cleanPhoto || "",
+    });
+    setUser({
+      uid: auth.currentUser.uid,
+      email: auth.currentUser.email,
+      displayName: cleanName,
+      photoURL: cleanPhoto || null,
+    });
+
+    // Automatically synchronize across all existing joined pools & pick documents
+    try {
+      await syncUserProfileAcrossAllPools(auth.currentUser.uid, cleanName, cleanPhoto);
+    } catch (syncErr) {
+      console.warn("Background sync across pools warning:", syncErr);
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -99,6 +124,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signUpWithEmail,
         sendPasswordReset,
         signOut,
+        updateUserProfile,
       }}
     >
       {children}

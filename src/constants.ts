@@ -38,6 +38,310 @@ export const NFL_TEAMS_ALL = [
 export const AFC_TEAMS = NFL_TEAMS_ALL.filter(t => t.conference === "AFC");
 export const NFC_TEAMS = NFL_TEAMS_ALL.filter(t => t.conference === "NFC");
 
+export const getNflTeamLogoUrl = (teamCode: string) =>
+  `https://a.espncdn.com/i/teamlogos/nfl/500/${teamCode.toLowerCase()}.png`;
+
+export const createEmojiAvatarUrl = (emoji: string, bg = "%230f172a", border = "%23334155", y = "54%") =>
+  `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128"><circle cx="64" cy="64" r="60" fill="${bg}" stroke="${border}" stroke-width="4"/><text x="50%" y="${y}" font-size="64" dominant-baseline="central" text-anchor="middle" font-family="Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji, sans-serif">${emoji}</text></svg>`;
+
+export const FOOTBALL_ICONS_AND_AVATARS = [
+  {
+    id: "fb_ball",
+    label: "Gridiron Football",
+    category: "Football",
+    icon: "🏈",
+    url: createEmojiAvatarUrl("🏈", "%231e293b", "%23059669"),
+  },
+  {
+    id: "fb_trophy",
+    label: "Lombardi Trophy",
+    category: "Football",
+    icon: "🏆",
+    url: createEmojiAvatarUrl("🏆", "%231e293b", "%23f59e0b"),
+  },
+  {
+    id: "fb_helmet",
+    label: "Football Helmet",
+    category: "Football",
+    icon: "🪖",
+    url: createEmojiAvatarUrl("🪖", "%231e293b", "%233b82f6"),
+  },
+  {
+    id: "fb_stadium",
+    label: "NFL Stadium",
+    category: "Football",
+    icon: "🏟️",
+    url: createEmojiAvatarUrl("🏟️", "%231e293b", "%2310b981"),
+  },
+  {
+    id: "fb_ring",
+    label: "Super Bowl Ring",
+    category: "Football",
+    icon: "💍",
+    url: createEmojiAvatarUrl("💍", "%231e293b", "%23eab308"),
+  },
+  {
+    id: "fb_gold_medal",
+    label: "Gold Medal (#1)",
+    category: "Football",
+    icon: "🥇",
+    url: createEmojiAvatarUrl("🥇", "%231e293b", "%23eab308"),
+  },
+  {
+    id: "fb_target",
+    label: "Accurate Passer",
+    category: "Football",
+    icon: "🎯",
+    url: createEmojiAvatarUrl("🎯", "%231e293b", "%23ef4444"),
+  },
+  {
+    id: "fb_playbook",
+    label: "Coach Playbook",
+    category: "Football",
+    icon: "📋",
+    url: createEmojiAvatarUrl("📋", "%231e293b", "%2306b6d4"),
+  },
+  {
+    id: "fb_megaphone",
+    label: "Sideline Megaphone",
+    category: "Football",
+    icon: "📢",
+    url: createEmojiAvatarUrl("📢", "%231e293b", "%238b5cf6"),
+  },
+  {
+    id: "fb_stopwatch",
+    label: "2-Minute Warning",
+    category: "Football",
+    icon: "⏱️",
+    url: createEmojiAvatarUrl("⏱️", "%231e293b", "%23f97316"),
+  },
+  {
+    id: "fb_jersey",
+    label: "Game Jersey",
+    category: "Football",
+    icon: "🎽",
+    url: createEmojiAvatarUrl("🎽", "%231e293b", "%2314b8a6"),
+  },
+  {
+    id: "fb_cleats",
+    label: "Turf Cleats",
+    category: "Football",
+    icon: "👟",
+    url: createEmojiAvatarUrl("👟", "%231e293b", "%2364748b"),
+  },
+  {
+    id: "nfl_shield",
+    label: "NFL Shield",
+    category: "Football",
+    icon: "🛡️",
+    url: "https://upload.wikimedia.org/wikipedia/en/a/a2/National_Football_League_logo.svg",
+  },
+  {
+    id: "afc_logo",
+    label: "AFC Conference",
+    category: "Football",
+    icon: "🔴",
+    url: "https://upload.wikimedia.org/wikipedia/commons/7/7a/American_Football_Conference_logo.svg",
+  },
+  {
+    id: "nfc_logo",
+    label: "NFC Conference",
+    category: "Football",
+    icon: "🔵",
+    url: "https://upload.wikimedia.org/wikipedia/commons/6/6f/National_Football_Conference_logo.svg",
+  },
+];
+
+export const POPULAR_EMOJIS_AND_AVATARS = [
+  {
+    id: "emoji_goat",
+    label: "The G.O.A.T.",
+    category: "Hype & Animals",
+    icon: "🐐",
+    url: createEmojiAvatarUrl("🐐", "%231e293b", "%23eab308"),
+  },
+  {
+    id: "emoji_fire",
+    label: "On Fire Streak",
+    category: "Hype & Animals",
+    icon: "🔥",
+    url: createEmojiAvatarUrl("🔥", "%231e293b", "%23f97316"),
+  },
+  {
+    id: "emoji_crown",
+    label: "The King / Crown",
+    category: "Hype & Animals",
+    icon: "👑",
+    url: createEmojiAvatarUrl("👑", "%231e293b", "%23eab308"),
+  },
+  {
+    id: "emoji_lightning",
+    label: "Lightning Bolt",
+    category: "Hype & Animals",
+    icon: "⚡",
+    url: createEmojiAvatarUrl("⚡", "%231e293b", "%2338bdf8"),
+  },
+  {
+    id: "emoji_muscle",
+    label: "Power Flex",
+    category: "Hype & Animals",
+    icon: "💪",
+    url: createEmojiAvatarUrl("💪", "%231e293b", "%2310b981"),
+  },
+  {
+    id: "emoji_money",
+    label: "Cash In / Bag",
+    category: "Hype & Animals",
+    icon: "💰",
+    url: createEmojiAvatarUrl("💰", "%231e293b", "%2322c55e"),
+  },
+  {
+    id: "emoji_rocket",
+    label: "Rocket Launch",
+    category: "Hype & Animals",
+    icon: "🚀",
+    url: createEmojiAvatarUrl("🚀", "%231e293b", "%23a855f7"),
+  },
+  {
+    id: "emoji_100",
+    label: "100 Percent",
+    category: "Hype & Animals",
+    icon: "💯",
+    url: createEmojiAvatarUrl("💯", "%231e293b", "%23ef4444"),
+  },
+  {
+    id: "emoji_lion",
+    label: "Lion Pride",
+    category: "Hype & Animals",
+    icon: "🦁",
+    url: createEmojiAvatarUrl("🦁", "%231e293b", "%230ea5e9"),
+  },
+  {
+    id: "emoji_eagle",
+    label: "Soaring Eagle",
+    category: "Hype & Animals",
+    icon: "🦅",
+    url: createEmojiAvatarUrl("🦅", "%231e293b", "%23059669"),
+  },
+  {
+    id: "emoji_bear",
+    label: "Bear Claws",
+    category: "Hype & Animals",
+    icon: "🐻",
+    url: createEmojiAvatarUrl("🐻", "%231e293b", "%23f97316"),
+  },
+  {
+    id: "emoji_bull",
+    label: "Raging Bull",
+    category: "Hype & Animals",
+    icon: "🐂",
+    url: createEmojiAvatarUrl("🐂", "%231e293b", "%23dc2626"),
+  },
+  {
+    id: "emoji_tiger",
+    label: "Bengal Tiger",
+    category: "Hype & Animals",
+    icon: "🐯",
+    url: createEmojiAvatarUrl("🐯", "%231e293b", "%23ea580c"),
+  },
+  {
+    id: "emoji_wolf",
+    label: "Alpha Wolf",
+    category: "Hype & Animals",
+    icon: "🐺",
+    url: createEmojiAvatarUrl("🐺", "%231e293b", "%2394a3b8"),
+  },
+  {
+    id: "emoji_dolphin",
+    label: "Speed Dolphin",
+    category: "Hype & Animals",
+    icon: "🐬",
+    url: createEmojiAvatarUrl("🐬", "%231e293b", "%2306b6d4"),
+  },
+  {
+    id: "emoji_horse",
+    label: "Wild Bronco",
+    category: "Hype & Animals",
+    icon: "🐎",
+    url: createEmojiAvatarUrl("🐎", "%231e293b", "%23f97316"),
+  },
+  {
+    id: "emoji_skull",
+    label: "Iron Defense Skull",
+    category: "Hype & Animals",
+    icon: "💀",
+    url: createEmojiAvatarUrl("💀", "%231e293b", "%2364748b"),
+  },
+  {
+    id: "emoji_diamond",
+    label: "Diamond Hands",
+    category: "Hype & Animals",
+    icon: "💎",
+    url: createEmojiAvatarUrl("💎", "%231e293b", "%2338bdf8"),
+  },
+  {
+    id: "emoji_cold",
+    label: "Ice In Veins",
+    category: "Hype & Animals",
+    icon: "🥶",
+    url: createEmojiAvatarUrl("🥶", "%231e293b", "%230284c7"),
+  },
+  {
+    id: "emoji_pepper",
+    label: "Red Hot",
+    category: "Hype & Animals",
+    icon: "🌶️",
+    url: createEmojiAvatarUrl("🌶️", "%231e293b", "%23e11d48"),
+  },
+  {
+    id: "emoji_brain",
+    label: "Mastermind GM",
+    category: "Hype & Animals",
+    icon: "🧠",
+    url: createEmojiAvatarUrl("🧠", "%231e293b", "%23ec4899"),
+  },
+  {
+    id: "emoji_dice",
+    label: "High Roller Dice",
+    category: "Hype & Animals",
+    icon: "🎲",
+    url: createEmojiAvatarUrl("🎲", "%231e293b", "%236366f1"),
+  },
+  {
+    id: "emoji_star",
+    label: "Superstar",
+    category: "Hype & Animals",
+    icon: "⭐",
+    url: createEmojiAvatarUrl("⭐", "%231e293b", "%23eab308"),
+  },
+  {
+    id: "emoji_bomb",
+    label: "Deep Bomb",
+    category: "Hype & Animals",
+    icon: "💣",
+    url: createEmojiAvatarUrl("💣", "%231e293b", "%23475569"),
+  },
+  {
+    id: "emoji_shades",
+    label: "Cool Stance",
+    category: "Hype & Animals",
+    icon: "😎",
+    url: createEmojiAvatarUrl("😎", "%231e293b", "%23f59e0b"),
+  },
+  {
+    id: "emoji_lock",
+    label: "Lock It In",
+    category: "Hype & Animals",
+    icon: "🔒",
+    url: createEmojiAvatarUrl("🔒", "%231e293b", "%23eab308"),
+  },
+];
+
+export const SPECIAL_AVATAR_LOGOS = [
+  ...FOOTBALL_ICONS_AND_AVATARS,
+  ...POPULAR_EMOJIS_AND_AVATARS,
+];
+
 export const NFL_WIN_TOTALS: Record<string, number> = {
   ARI: 3.5,
   ATL: 6.5,
@@ -72,6 +376,93 @@ export const NFL_WIN_TOTALS: Record<string, number> = {
   TEN: 6.5,
   WAS: 7.5
 };
+
+export const BEER_AND_LEISURE_AVATARS = [
+  {
+    id: "leisure_cig",
+    label: "Cigarette",
+    category: "Leisure",
+    icon: "🚬",
+    url: createEmojiAvatarUrl("🚬", "%231e293b", "%2394a3b8", "50%"),
+  },
+  {
+    id: "beer_budweiser",
+    label: "Budweiser",
+    category: "Leisure",
+    icon: "🍻",
+    url: "https://upload.wikimedia.org/wikipedia/commons/5/5e/Budweiser_Anheuser-Busch_logo.svg",
+  },
+  {
+    id: "beer_budlight",
+    label: "Bud Light",
+    category: "Leisure",
+    icon: "🍺",
+    url: "https://cdn.worldvectorlogo.com/logos/bud-light.svg",
+  },
+  {
+    id: "beer_miller",
+    label: "Miller Lite",
+    category: "Leisure",
+    icon: "🍺",
+    url: "https://upload.wikimedia.org/wikipedia/en/f/f3/MillerLite2014.png",
+  },
+  {
+    id: "beer_coors",
+    label: "Coors Light",
+    category: "Leisure",
+    icon: "🏔️",
+    url: "https://upload.wikimedia.org/wikipedia/commons/6/63/Coors_Light_logo.svg",
+  },
+  {
+    id: "beer_modelo",
+    label: "Modelo Especial",
+    category: "Leisure",
+    icon: "🍺",
+    url: "https://cdn.worldvectorlogo.com/logos/modelo-especial.svg",
+  },
+  {
+    id: "beer_corona",
+    label: "Corona Extra",
+    category: "Leisure",
+    icon: "🍋",
+    url: "https://upload.wikimedia.org/wikipedia/en/7/71/Corona_Extra.svg",
+  },
+  {
+    id: "beer_heineken",
+    label: "Heineken",
+    category: "Leisure",
+    icon: "🍺",
+    url: "https://upload.wikimedia.org/wikipedia/commons/2/24/Heineken_logo.svg",
+  },
+  {
+    id: "beer_stella",
+    label: "Stella Artois",
+    category: "Leisure",
+    icon: "🍺",
+    url: "https://upload.wikimedia.org/wikipedia/en/3/37/Stella_Artois_logo.svg",
+  },
+  {
+    id: "beer_pabst",
+    label: "Pabst Blue Ribbon",
+    category: "Leisure",
+    icon: "🍺",
+    url: "https://upload.wikimedia.org/wikipedia/en/c/cd/Pabst_Blue_Ribbon_logo.svg",
+  },
+  {
+    id: "beer_guinness",
+    label: "Guinness",
+    category: "Leisure",
+    icon: "🍺",
+    url: "https://upload.wikimedia.org/wikipedia/en/f/f8/Guinness_logo_dark_text.svg",
+  },
+  {
+    id: "leisure_whiskey",
+    label: "Whiskey",
+    category: "Leisure",
+    icon: "🥃",
+    url: createEmojiAvatarUrl("🥃", "%231e293b", "%23d97706"),
+  }
+];
 
 export const FUTURES_QUESTIONS: FutureQuestion[] = [
   // 1. Championship & Awards (Huge Points)

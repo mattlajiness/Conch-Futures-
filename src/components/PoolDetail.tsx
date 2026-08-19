@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { ArrowLeft, Award, Users, Save, MessageSquare, Sparkles, Settings, Copy, Check, Share2, RefreshCw, Search, History, Clock, Timer, CircleDollarSign } from "lucide-react";
+import { ArrowLeft, Award, Users, Save, MessageSquare, Sparkles, Settings, Copy, Check, Share2, RefreshCw, Search, History, Clock, Timer, CircleDollarSign, User } from "lucide-react";
 import { Pool, Picks } from "../types";
-import { doc, getDoc, onSnapshot } from "firebase/firestore";
+import { doc, getDoc, onSnapshot, updateDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import { AuthUser } from "../lib/auth";
 import StandingsTab from "./StandingsTab";
@@ -10,6 +10,7 @@ import ComparePicksTab from "./ComparePicksTab";
 import AdminTab from "./AdminTab";
 import ChatTab from "./ChatTab";
 import LastYearResultsTab from "./LastYearResultsTab";
+import ProfileTab from "./ProfileTab";
 import { fetchNflStandings, TeamStandingInfo } from "../lib/nflApi";
 import { FUTURES_QUESTIONS } from "../constants";
 
@@ -19,7 +20,7 @@ interface PoolDetailProps {
   onBack: () => void;
 }
 
-type TabType = "standings" | "my_picks" | "compare" | "admin" | "last_year" | "chat";
+type TabType = "standings" | "my_picks" | "compare" | "admin" | "last_year" | "chat" | "profile";
 
 export function getAppShareUrl(code: string): string {
   const defaultPublicUrl = "https://ais-pre-xfiomcrem6vpcrlcdoi546-387114323884.us-east1.run.app";
@@ -142,7 +143,22 @@ export default function PoolDetail({ pool: initialPool, user, onBack }: PoolDeta
       const pickDocRef = doc(db, `pools/${initialPool.id}/picks`, user.uid);
       const pickDocSnap = await getDoc(pickDocRef);
       if (pickDocSnap.exists()) {
-        setUserPicks({ id: pickDocSnap.id, ...pickDocSnap.data() } as any);
+        const pickData = pickDocSnap.data();
+        // Self-heal: If user has a photoURL in Auth but this pool's pick has a blank or outdated photoURL, sync it
+        if (user.photoURL && pickData.userPhotoURL !== user.photoURL) {
+          updateDoc(pickDocRef, {
+            userPhotoURL: user.photoURL,
+            userDisplayName: user.displayName || pickData.userDisplayName || "Player",
+            updatedAt: serverTimestamp(),
+          }).catch(console.debug);
+        }
+
+        setUserPicks({
+          id: pickDocSnap.id,
+          ...pickData,
+          userDisplayName: user.displayName || pickData.userDisplayName || "Player",
+          userPhotoURL: user.photoURL || pickData.userPhotoURL || "",
+        } as any);
       } else {
         setUserPicks(null);
       }
@@ -445,6 +461,27 @@ export default function PoolDetail({ pool: initialPool, user, onBack }: PoolDeta
         >
           <MessageSquare className="w-4 h-4" /> Chat
         </button>
+
+        <button
+          onClick={() => setActiveTab("profile")}
+          className={`px-2.5 py-1.5 rounded-t-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer ${
+            activeTab === "profile"
+              ? "bg-slate-800 text-emerald-400 border-b-2 border-emerald-500"
+              : "text-slate-400 hover:text-slate-200"
+          }`}
+        >
+          {user.photoURL ? (
+            <img
+              src={user.photoURL}
+              alt=""
+              className="w-4 h-4 rounded-full bg-slate-950 object-contain"
+              referrerPolicy="no-referrer"
+            />
+          ) : (
+            <User className="w-4 h-4" />
+          )}
+          <span>My Profile</span>
+        </button>
       </div>
 
       
@@ -469,7 +506,7 @@ export default function PoolDetail({ pool: initialPool, user, onBack }: PoolDeta
         </div>
       )}
 
-      {activeTab !== "my_picks" && activeTab !== "admin" && activeTab !== "last_year" && activeTab !== "chat" && (
+      {activeTab !== "my_picks" && activeTab !== "admin" && activeTab !== "last_year" && activeTab !== "chat" && activeTab !== "profile" && (
       <div id="category-filter-bar" className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 bg-slate-900 border border-slate-800 p-3 rounded-xl mb-2 shadow-inner">
         <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider font-mono flex items-center gap-1.5">
           <Sparkles className="w-3.5 h-3.5 text-emerald-400" /> Filter Futures:
@@ -524,6 +561,15 @@ export default function PoolDetail({ pool: initialPool, user, onBack }: PoolDeta
 
         {activeTab === "chat" && (
           <ChatTab pool={pool} user={user} />
+        )}
+
+        {activeTab === "profile" && (
+          <ProfileTab
+            pool={pool}
+            user={user}
+            userPicks={userPicks}
+            onProfileUpdated={fetchUserPicks}
+          />
         )}
 
         {activeTab === "admin" && isCreator && (

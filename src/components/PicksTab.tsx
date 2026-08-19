@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef } from "react";
 import { FUTURES_QUESTIONS, NFL_TEAMS_ALL, AFC_TEAMS, NFC_TEAMS, NFL_WIN_TOTALS } from "../constants";
-import { Save, Check, Award, Compass, ShieldAlert, Zap, ListOrdered, GripVertical, Trophy, ChevronRight, ChevronLeft, ChevronUp, ChevronDown } from "lucide-react";
+import { Save, Check, Award, Compass, ShieldAlert, Zap, ListOrdered, GripVertical, Trophy, ChevronRight, ChevronLeft, ChevronUp, ChevronDown, Sparkles } from "lucide-react";
 import { doc, setDoc, serverTimestamp, collectionGroup, query, where, getDocs, getDoc } from "firebase/firestore";
 import { CheckCircle2, Loader2, Copy } from "lucide-react";
 import { db, OperationType, handleFirestoreError } from "../lib/firebase";
 import { AuthUser } from "../lib/auth";
 import { Picks, Pool } from "../types";
 import { TeamStandingInfo } from "../lib/nflApi";
+import ProfileCustomizerModal from "./ProfileCustomizerModal";
 
 interface PicksTabProps {
   pool: Pool;
@@ -47,6 +48,7 @@ export default function PicksTab({ pool, user, userPicks, onPicksSaved, nflStand
   const [showCopyModal, setShowCopyModal] = useState(false);
   const [otherPoolPicks, setOtherPoolPicks] = useState<{poolId: string; poolName: string; selections: Record<string, string>; tiebreaker?: string}[]>([]);
   const [loadingOtherPicks, setLoadingOtherPicks] = useState(false);
+  const [isCustomizerOpen, setIsCustomizerOpen] = useState(false);
 
   const activeQuestionsList = FUTURES_QUESTIONS;
   const standingsQuestions = activeQuestionsList.filter((q) => q.category === "standings");
@@ -320,15 +322,44 @@ export default function PicksTab({ pool, user, userPicks, onPicksSaved, nflStand
 
   return (
     <div className="bg-[#09222c] border border-[#113a4b]/80 rounded-2xl p-4 sm:p-6 shadow-xl relative min-h-[600px] flex flex-col">
-      {/* Header with Copy Picks */}
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-extrabold text-white">Your Picks</h2>
+      {/* Header with Copy Picks and User Profile Logo Info */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+        <div className="flex items-center gap-2.5">
+          <button
+            type="button"
+            onClick={() => setIsCustomizerOpen(true)}
+            className="flex items-center gap-2 bg-slate-800/80 hover:bg-slate-800 border border-slate-700/80 hover:border-emerald-500/50 px-2.5 py-1.5 rounded-xl transition-all group cursor-pointer"
+            title="Click to customize your NFL team logo & name"
+          >
+            {user.photoURL ? (
+              <img
+                src={user.photoURL}
+                alt={user.displayName}
+                className="w-7 h-7 rounded-full bg-slate-950 p-0.5 border border-slate-700 object-contain group-hover:scale-105 transition-transform shadow-sm"
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              <div className="w-7 h-7 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-[10px] text-slate-300 uppercase">
+                {user.displayName?.charAt(0)}
+              </div>
+            )}
+            <div className="text-left">
+              <div className="text-xs font-bold text-white group-hover:text-emerald-300 transition-colors">
+                {user.displayName || "Player"}
+              </div>
+              <div className="text-[10px] text-emerald-400 font-medium flex items-center gap-1">
+                <Sparkles className="w-2.5 h-2.5" /> Customize Logo
+              </div>
+            </div>
+          </button>
+        </div>
+
         <button
           onClick={() => {
             setShowCopyModal(true);
             if (otherPoolPicks.length === 0) fetchOtherPicks();
           }}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded-lg text-xs font-bold transition-colors"
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded-lg text-xs font-bold transition-colors cursor-pointer"
         >
           <Copy className="w-4 h-4" /> Copy from another pool
         </button>
@@ -909,6 +940,12 @@ export default function PicksTab({ pool, user, userPicks, onPicksSaved, nflStand
         ) : null}
       </div>
 
+      {/* Profile & Logo Customizer Modal */}
+      <ProfileCustomizerModal
+        isOpen={isCustomizerOpen}
+        onClose={() => setIsCustomizerOpen(false)}
+        currentPoolId={pool.id}
+      />
     </div>
   );
 }

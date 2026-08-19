@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 import { doc, updateDoc, collection, getDocs, deleteDoc } from "firebase/firestore";
 import { db, OperationType, handleFirestoreError } from "../lib/firebase";
+import { useAuth } from "../lib/auth";
 import { Pool, PoolDuesPayment } from "../types";
 
 interface AdminTabProps {
@@ -43,6 +44,7 @@ interface AdminTabProps {
 }
 
 export default function AdminTab({ pool, onPoolUpdated, categoryFilter = "all", nflStandings, activeSubTab, onSubTabChange }: AdminTabProps) {
+  const { user } = useAuth();
   const [internalTab, setInternalTab] = useState<"grades" | "dues" | "config">("grades");
   
   const activeTab = activeSubTab || internalTab;
@@ -119,11 +121,14 @@ export default function AdminTab({ pool, onPoolUpdated, categoryFilter = "all", 
       const memberList: { userId: string; userDisplayName: string; userPhotoURL?: string; pickCount: number }[] = [];
       picksSnap.forEach((docSnap) => {
         const data = docSnap.data();
+        const isCurrentAuthUser = user && docSnap.id === user.uid;
+        const photo = (isCurrentAuthUser && user.photoURL) ? user.photoURL : (data.userPhotoURL || "");
+        const name = (isCurrentAuthUser && user.displayName) ? user.displayName : (data.userDisplayName || "Anonymous Player");
         const pickCount = data.selections ? Object.keys(data.selections).length : 0;
         memberList.push({
           userId: docSnap.id,
-          userDisplayName: data.userDisplayName || "Anonymous Player",
-          userPhotoURL: data.userPhotoURL,
+          userDisplayName: name,
+          userPhotoURL: photo,
           pickCount,
         });
       });
@@ -832,7 +837,7 @@ export default function AdminTab({ pool, onPoolUpdated, categoryFilter = "all", 
                           <img
                             src={m.userPhotoURL}
                             alt={m.userDisplayName}
-                            className="w-9 h-9 rounded-full border border-slate-700 flex-shrink-0"
+                            className="w-9 h-9 rounded-full bg-slate-950 p-0.5 border border-slate-700 object-contain flex-shrink-0 shadow-sm"
                             referrerPolicy="no-referrer"
                           />
                         ) : (
