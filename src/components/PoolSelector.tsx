@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { collection, query, where, getDocs, doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
+import { collection, collectionGroup, query, where, getDocs, doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
 import { Trophy, Plus, LogIn, Lock, Users, ArrowRight, AlertCircle, Sparkles, Heart, Activity, UserPlus, CheckCircle2, Edit3, Shield } from "lucide-react";
 import { db, OperationType, handleFirestoreError } from "../lib/firebase";
 import { AuthUser } from "../lib/auth";
@@ -98,10 +98,15 @@ export default function PoolSelector({ user, onSelectPool }: PoolSelectorProps) 
   const [inviteError, setInviteError] = useState<string | null>(null);
   const [joiningInvite, setJoiningInvite] = useState(false);
 
-  // Local storage keys to track joined pools
+  // Membership lives in Firestore as pools/{poolId}/picks/{uid}. These
+  // localStorage helpers are only a warm cache and a last-resort fallback when
+  // Firestore can't be reached — never the source of truth. Treating them as
+  // authoritative hid joined pools on every browser except the one that joined.
+  const cacheKey = `joined_pools_${user.uid}`;
+
   const getSavedPoolIds = (): string[] => {
     try {
-      const saved = localStorage.getItem(`joined_pools_${user.uid}`);
+      const saved = localStorage.getItem(cacheKey);
       return saved ? JSON.parse(saved) : [];
     } catch {
       return [];
@@ -113,8 +118,16 @@ export default function PoolSelector({ user, onSelectPool }: PoolSelectorProps) 
       const saved = getSavedPoolIds();
       if (!saved.includes(id)) {
         saved.push(id);
-        localStorage.setItem(`joined_pools_${user.uid}`, JSON.stringify(saved));
+        localStorage.setItem(cacheKey, JSON.stringify(saved));
       }
+    } catch (e) {
+      console.error("Local storage save error", e);
+    }
+  };
+
+  const cachePoolIds = (ids: string[]) => {
+    try {
+      localStorage.setItem(cacheKey, JSON.stringify(ids));
     } catch (e) {
       console.error("Local storage save error", e);
     }
@@ -141,10 +154,14 @@ export default function PoolSelector({ user, onSelectPool }: PoolSelectorProps) 
       const docSnap = querySnap.docs[0];
       const foundPool = { id: docSnap.id, ...docSnap.data() } as Pool;
 
-      // Check if already a member or creator
-      const savedIds = getSavedPoolIds();
+      // Check if already a member or creator. The pick document is the
+      // membership record, so this stays right on a device that has never
+      // opened this pool before.
       const isCreator = foundPool.creatorId === user.uid;
-      const isMember = savedIds.includes(foundPool.id) || isCreator;
+      const pickSnap = await getDoc(
+        doc(db, `pools/${foundPool.id}/picks`, user.uid)
+      );
+      const isMember = isCreator || pickSnap.exists();
 
       if (isMember) {
         // Already a member! Clean URL and open the pool
@@ -169,6 +186,41 @@ export default function PoolSelector({ user, onSelectPool }: PoolSelectorProps) 
     }
   }, [user.uid]);
 
+  // Every pool this user has joined, found from the pick documents they own.
+  // The collection-group query needs the COLLECTION_GROUP index on
+  // picks.userId (see firestore.indexes.json); while that index is still
+  // building Firestore rejects the query, so fall back to scanning the pools
+  // collection — same answer, just more reads. Returns null when neither path
+  // works, so the caller knows the result isn't authoritative.
+  const fetchJoinedPoolIds = async (): Promise<string[] | null> => {
+    try {
+      const picksSnap = await getDocs(
+        query(collectionGroup(db, "picks"), where("userId", "==", user.uid))
+      );
+      return picksSnap.docs
+        .map((d) => d.ref.parent.parent?.id)
+        .filter((id): id is string => Boolean(id));
+    } catch (groupErr) {
+      console.warn("Picks collection-group query unavailable", groupErr);
+    }
+
+    try {
+      const poolsSnap = await getDocs(collection(db, "pools"));
+      const ids = await Promise.all(
+        poolsSnap.docs.map(async (poolDoc) => {
+          const pick = await getDoc(
+            doc(db, `pools/${poolDoc.id}/picks`, user.uid)
+          );
+          return pick.exists() ? poolDoc.id : null;
+        })
+      );
+      return ids.filter((id): id is string => Boolean(id));
+    } catch (scanErr) {
+      console.warn("Pool membership scan failed", scanErr);
+      return null;
+    }
+  };
+
   const fetchPools = async () => {
     setLoading(true);
     setError(null);
@@ -185,18 +237,26 @@ export default function PoolSelector({ user, onSelectPool }: PoolSelectorProps) 
         fetchedMap.set(docSnap.id, { id: docSnap.id, ...docSnap.data() } as Pool);
       });
 
-      // 2. Fetch saved pool IDs from local storage
-      const savedIds = getSavedPoolIds();
-      for (const id of savedIds) {
-        if (!fetchedMap.has(id)) {
+      // 2. Fetch pools the user joined, from Firestore rather than this
+      // browser's cache. Only fall back to the cache if Firestore couldn't
+      // answer at all.
+      const joinedIds = await fetchJoinedPoolIds();
+      const idsToLoad = joinedIds ?? getSavedPoolIds();
+      await Promise.all(
+        idsToLoad.map(async (id) => {
+          if (fetchedMap.has(id)) return;
           const poolDoc = await getDoc(doc(db, "pools", id));
           if (poolDoc.exists()) {
             fetchedMap.set(id, { id: poolDoc.id, ...poolDoc.data() } as Pool);
           }
-        }
-      }
+        })
+      );
 
-      setPools(Array.from(fetchedMap.values()));
+      const found = Array.from(fetchedMap.values());
+      setPools(found);
+      // Re-seed the warm cache only from an authoritative read, so a pool the
+      // user actually left doesn't linger forever.
+      if (joinedIds) cachePoolIds(found.map((p) => p.id));
     } catch (err) {
       console.error(err);
       setError("Failed to load your pools. Please try again.");

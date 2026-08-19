@@ -1,6 +1,9 @@
 import { db } from "./firebase";
 import {
   collection,
+  collectionGroup,
+  query,
+  where,
   getDocs,
   doc,
   updateDoc,
@@ -23,24 +26,30 @@ export async function syncUserProfileAcrossAllPools(
   const cleanPhoto = photoURL.trim();
 
   try {
-    // 1. Gather all pool IDs from Firestore + localStorage
+    // 1. Gather the pools this user belongs to, from their own pick documents.
+    // The previous localStorage lookup read "user_pool_ids", a key nothing ever
+    // writes, so it only ever contributed an empty list.
     const poolIdsSet = new Set<string>();
 
+    try {
+      const picksSnap = await getDocs(
+        query(collectionGroup(db, "picks"), where("userId", "==", userId))
+      );
+      picksSnap.docs.forEach((d) => {
+        const poolId = d.ref.parent.parent?.id;
+        if (poolId) poolIdsSet.add(poolId);
+      });
+    } catch (e) {
+      console.warn("Picks collection-group query unavailable:", e);
+    }
+
+    // Pools they created but have no pick document in, plus a safety net while
+    // the picks collection-group index is still building.
     try {
       const poolsSnap = await getDocs(collection(db, "pools"));
       poolsSnap.docs.forEach((d) => poolIdsSet.add(d.id));
     } catch (e) {
       console.warn("Could not query all pools collection:", e);
-    }
-
-    try {
-      const stored = localStorage.getItem("user_pool_ids");
-      if (stored) {
-        const localIds: string[] = JSON.parse(stored);
-        localIds.forEach((id) => poolIdsSet.add(id));
-      }
-    } catch (e) {
-      console.warn("Could not read local pool ids:", e);
     }
 
     // 2. Loop through all known pool IDs and synchronize pick documents
