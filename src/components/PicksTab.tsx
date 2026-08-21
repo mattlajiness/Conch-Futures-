@@ -461,7 +461,7 @@ export default function PicksTab({ pool, user, userPicks, onPicksSaved, nflStand
                       </div>
                     </div>
 
-                    <div className="bg-slate-900/50 p-2 sm:p-4 rounded-xl border border-slate-700/50">
+                    <div className="bg-slate-900/50 p-2 sm:p-4 rounded-xl border border-slate-700/50 max-w-md mx-auto w-full">
                       <div className="space-y-2.5 relative">
                         {currentOrder.map((teamVal, index) => {
                           const slotNum = index + 1;
