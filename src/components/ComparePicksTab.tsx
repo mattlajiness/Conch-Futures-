@@ -350,9 +350,22 @@ export default function ComparePicksTab({ pool, categoryFilter = "all", nflStand
                         )}
                         <div className="min-w-0 flex-1">
                           <span className="text-xs font-bold text-slate-300 block truncate">{pick.userDisplayName}</span>
-                          <span className={`text-[11px] font-semibold block truncate ${userChoice ? "text-white" : "text-slate-600 italic"}`}>
-                            {label}
-                          </span>
+                          {selectedQuestion.category === "standings" && userChoice ? (
+                            <div className="flex items-center gap-1 flex-wrap mt-0.5">
+                              {userChoice.split(",").map((t, idx) => (
+                                <div key={idx} className="flex items-center gap-0.5">
+                                  <div className="bg-slate-950 p-0.5 rounded border border-slate-700/60" title={selectedQuestion.options.find(o => o.value === t)?.label || t}>
+                                    <img src={`https://a.espncdn.com/i/teamlogos/nfl/500/${t.toLowerCase()}.png`} alt={t} className="w-4 h-4 object-contain" referrerPolicy="no-referrer" />
+                                  </div>
+                                  {idx < 3 && <span className="text-slate-600 text-[10px] font-bold">&gt;</span>}
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className={`text-[11px] font-semibold block truncate ${userChoice ? "text-white" : "text-slate-600 italic"}`}>
+                              {label}
+                            </span>
+                          )}
                         </div>
                       </div>
                       <div className="flex-shrink-0">

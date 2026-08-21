@@ -462,7 +462,7 @@ export default function PicksTab({ pool, user, userPicks, onPicksSaved, nflStand
                     </div>
 
                     <div className="bg-slate-900/50 p-2 sm:p-4 rounded-xl border border-slate-700/50">
-                      <div className="space-y-2 relative">
+                      <div className="space-y-2.5 relative">
                         {currentOrder.map((teamVal, index) => {
                           const slotNum = index + 1;
                           const teamLabel = q.options.find((o) => o.value === teamVal)?.label || "Unassigned";
@@ -474,47 +474,108 @@ export default function PicksTab({ pool, user, userPicks, onPicksSaved, nflStand
                               onDragStart={(e) => handleDragStart(e, q.id, index)}
                               onDragOver={(e) => handleDragOver(e, index)}
                               onDrop={(e) => handleDrop(e, q.id, index)}
-                              className={`flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg border transition-all ${
+                              className={`flex items-center justify-between gap-2 sm:gap-3 p-2 sm:p-2.5 rounded-xl border transition-all ${
                                 isFilled
-                                  ? "bg-slate-800 border-slate-600 hover:border-emerald-500/50 cursor-grab active:cursor-grabbing"
-                                  : "bg-slate-900 border-slate-700/50 border-dashed"
+                                  ? "bg-slate-800/90 border-slate-600 hover:border-emerald-500/50 cursor-grab active:cursor-grabbing shadow-sm"
+                                  : "bg-slate-900/60 border-slate-700/50 border-dashed"
                               }`}
                             >
-                              <div className="w-6 h-6 flex items-center justify-center bg-slate-900 rounded font-bold text-slate-500 text-xs shrink-0">
-                                {slotNum}
-                              </div>
-                              {isFilled ? (
-                                <>
-                                  <div className="w-8 h-8 flex items-center justify-center shrink-0">
-                                    <img src={`https://a.espncdn.com/i/teamlogos/nfl/500/${teamVal.toLowerCase()}.png`} alt={teamLabel} className="w-8 h-8 object-contain" referrerPolicy="no-referrer" />
+                              {/* Left: Slot number & Logo */}
+                              <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                                <div className={`w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-lg font-mono font-black text-xs shrink-0 ${
+                                  index === 0
+                                    ? "bg-amber-500/20 text-amber-300 border border-amber-500/30"
+                                    : index === 1
+                                    ? "bg-slate-700/50 text-slate-200 border border-slate-600/50"
+                                    : "bg-slate-900 text-slate-500 border border-slate-800"
+                                }`}>
+                                  #{slotNum}
+                                </div>
+                                {isFilled ? (
+                                  <div className="w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center p-1 bg-slate-900/80 rounded-xl border border-slate-700/60 shrink-0 shadow-inner" title={teamLabel}>
+                                    <img
+                                      src={`https://a.espncdn.com/i/teamlogos/nfl/500/${teamVal.toLowerCase()}.png`}
+                                      alt={teamLabel}
+                                      className="w-10 h-10 sm:w-12 sm:h-12 object-contain drop-shadow"
+                                      referrerPolicy="no-referrer"
+                                    />
                                   </div>
-                                  <div className="flex-1 flex flex-row justify-between items-center pr-1 sm:pr-2 gap-2 min-w-0">
-                                    <span className="font-bold text-slate-200 text-sm sm:text-base truncate mr-1">{teamLabel}</span>
-                                    <div className="flex items-center justify-end gap-1.5 sm:gap-2 bg-slate-900/80 rounded-md p-1 border border-slate-700/50 shrink-0" onPointerDown={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}>
-                                      <span className="text-[11px] sm:text-[10px] text-slate-400 font-mono px-1 whitespace-nowrap font-bold">{NFL_WIN_TOTALS[teamVal] || 8.5}</span>
-                                      <div className="flex gap-1 shrink-0">
-                                        <button 
-                                          type="button"
-                                          onClick={(e) => { e.stopPropagation(); handleSelectOption(`ou_${teamVal.toLowerCase()}`, 'OVER'); }}
-                                          className={`px-3 sm:px-2 py-1 sm:py-0.5 rounded text-[10px] sm:text-[10px] font-bold transition-colors ${selections[`ou_${teamVal.toLowerCase()}`] === 'OVER' ? 'bg-emerald-500 text-white shadow-[0_0_10px_rgba(16,185,129,0.3)]' : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white'}`}
-                                        >O</button>
-                                        <button 
-                                          type="button"
-                                          onClick={(e) => { e.stopPropagation(); handleSelectOption(`ou_${teamVal.toLowerCase()}`, 'UNDER'); }}
-                                          className={`px-3 sm:px-2 py-1 sm:py-0.5 rounded text-[10px] sm:text-[10px] font-bold transition-colors ${selections[`ou_${teamVal.toLowerCase()}`] === 'UNDER' ? 'bg-rose-500 text-white shadow-[0_0_10px_rgba(244,63,94,0.3)]' : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white'}`}
-                                        >U</button>
-                                      </div>
+                                ) : (
+                                  <div className="text-slate-500 text-xs italic px-2">
+                                    Choose team logo below for #{slotNum}
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Right: Over / Under Controls + Move / Drag */}
+                              {isFilled && (
+                                <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+                                  <div
+                                    className="flex items-center gap-1.5 sm:gap-2 bg-slate-900/90 rounded-lg p-1 sm:p-1.5 border border-slate-700/60"
+                                    onPointerDown={(e) => e.stopPropagation()}
+                                    onMouseDown={(e) => e.stopPropagation()}
+                                    onTouchStart={(e) => e.stopPropagation()}
+                                  >
+                                    <span className="text-[11px] sm:text-xs text-slate-400 font-mono font-bold px-1 whitespace-nowrap">
+                                      {NFL_WIN_TOTALS[teamVal] || 8.5}
+                                    </span>
+                                    <div className="flex gap-1">
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleSelectOption(`ou_${teamVal.toLowerCase()}`, "OVER");
+                                        }}
+                                        className={`px-3 sm:px-3.5 py-1 sm:py-1 rounded text-xs font-black transition-all cursor-pointer ${
+                                          selections[`ou_${teamVal.toLowerCase()}`] === "OVER"
+                                            ? "bg-emerald-500 text-slate-950 shadow-[0_0_12px_rgba(16,185,129,0.4)] scale-105"
+                                            : "bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white"
+                                        }`}
+                                      >
+                                        O
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleSelectOption(`ou_${teamVal.toLowerCase()}`, "UNDER");
+                                        }}
+                                        className={`px-3 sm:px-3.5 py-1 sm:py-1 rounded text-xs font-black transition-all cursor-pointer ${
+                                          selections[`ou_${teamVal.toLowerCase()}`] === "UNDER"
+                                            ? "bg-rose-500 text-white shadow-[0_0_12px_rgba(244,63,94,0.4)] scale-105"
+                                            : "bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white"
+                                        }`}
+                                      >
+                                        U
+                                      </button>
                                     </div>
                                   </div>
-                                  <GripVertical className="w-5 h-5 text-slate-600 shrink-0 hidden sm:block" />
+
+                                  <GripVertical className="w-5 h-5 text-slate-500 shrink-0 hidden sm:block" />
                                   <div className="flex flex-col gap-0 sm:hidden shrink-0 border-l border-slate-700 pl-1">
-                                     <button type="button" onClick={(e) => { e.stopPropagation(); handleMove(q.id, index, 'up'); }} disabled={index === 0} className="p-1 text-slate-400 disabled:opacity-20 active:bg-slate-800 rounded"><ChevronUp className="w-5 h-5" /></button>
-                                     <button type="button" onClick={(e) => { e.stopPropagation(); handleMove(q.id, index, 'down'); }} disabled={index === 3} className="p-1 text-slate-400 disabled:opacity-20 active:bg-slate-800 rounded"><ChevronDown className="w-5 h-5" /></button>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleMove(q.id, index, "up");
+                                      }}
+                                      disabled={index === 0}
+                                      className="p-1 text-slate-400 disabled:opacity-20 active:bg-slate-800 rounded"
+                                    >
+                                      <ChevronUp className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleMove(q.id, index, "down");
+                                      }}
+                                      disabled={index === 3}
+                                      className="p-1 text-slate-400 disabled:opacity-20 active:bg-slate-800 rounded"
+                                    >
+                                      <ChevronDown className="w-4 h-4" />
+                                    </button>
                                   </div>
-                                </>
-                              ) : (
-                                <div className="flex-1 flex justify-between items-center text-slate-600 text-sm italic">
-                                  Select a team for {slotNum}{slotNum === 1 ? 'st' : slotNum === 2 ? 'nd' : slotNum === 3 ? 'rd' : 'th'} place below
                                 </div>
                               )}
                             </div>
@@ -525,8 +586,10 @@ export default function PicksTab({ pool, user, userPicks, onPicksSaved, nflStand
                       {/* Unassigned Teams */}
                       {!isFullyFilled && (
                         <div className="mt-6 border-t border-slate-700/50 pt-4">
-                          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Available Teams</p>
-                          <div className="flex flex-wrap gap-2">
+                          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
+                            Available Teams (Tap logo to place in next spot)
+                          </p>
+                          <div className="grid grid-cols-4 gap-2 sm:gap-3">
                             {q.options.map((opt) => {
                               if (currentOrder.includes(opt.value)) return null;
                               return (
@@ -540,10 +603,18 @@ export default function PicksTab({ pool, user, userPicks, onPicksSaved, nflStand
                                       handleSelectOption(q.id, newOrder.join(","));
                                     }
                                   }}
-                                  className="flex items-center gap-2 px-3 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-lg transition-colors"
+                                  className="flex flex-col items-center justify-center p-2.5 sm:p-3 bg-slate-800/90 hover:bg-slate-700 hover:border-emerald-500/50 border border-slate-600 rounded-xl transition-all shadow-sm group cursor-pointer"
+                                  title={opt.label}
                                 >
-                                  <img src={`https://a.espncdn.com/i/teamlogos/nfl/500/${opt.value.toLowerCase()}.png`} alt={opt.label} className="w-5 h-5 object-contain" referrerPolicy="no-referrer" />
-                                  <span className="text-sm font-semibold text-slate-300">{opt.label}</span><span className="text-[10px] text-slate-500 font-mono ml-1">({NFL_WIN_TOTALS[opt.value] || 8.5})</span>
+                                  <img
+                                    src={`https://a.espncdn.com/i/teamlogos/nfl/500/${opt.value.toLowerCase()}.png`}
+                                    alt={opt.label}
+                                    className="w-10 h-10 sm:w-12 sm:h-12 object-contain drop-shadow group-hover:scale-110 transition-transform"
+                                    referrerPolicy="no-referrer"
+                                  />
+                                  <span className="text-[10px] text-slate-400 font-mono font-bold mt-1.5">
+                                    O/U {NFL_WIN_TOTALS[opt.value] || 8.5}
+                                  </span>
                                 </button>
                               );
                             })}
@@ -826,29 +897,67 @@ export default function PicksTab({ pool, user, userPicks, onPicksSaved, nflStand
                          </div>
                          
                          {step.category === 'standings' && stepQuestions.length > 0 && (
-                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                             {(() => {
-                               const q = stepQuestions[0];
-                               const order = getStandingOrder(q.id, selections);
-                               return order.map((teamVal, index) => {
-                                 const teamLabel = q.options.find((o: any) => o.value === teamVal)?.label || "Unassigned";
-                                 const ouPick = selections[`ou_${teamVal?.toLowerCase()}`] || "-";
-                                 return (
-                                   <div key={index} className="flex items-center justify-between bg-slate-800/80 px-3 py-2 rounded border border-slate-700/50 text-xs">
-                                     <span className="text-slate-300 truncate mr-2"><span className="text-slate-500 font-mono mr-1.5">{index + 1}.</span> {teamLabel}</span>
-                                     {teamVal && (
-                                       <span className={`font-bold font-mono px-1.5 py-0.5 rounded ${ouPick === 'OVER' ? 'text-emerald-400 bg-emerald-500/10' : ouPick === 'UNDER' ? 'text-rose-400 bg-rose-500/10' : 'text-slate-500'}`}>
-                                         {ouPick}
-                                       </span>
-                                     )}
-                                   </div>
-                                 );
-                               });
-                             })()}
-                           </div>
-                         )}
-               
-                         {step.category !== 'standings' && (
+                            <div className="grid grid-cols-4 gap-1.5 sm:gap-2.5">
+                              {(() => {
+                                const q = stepQuestions[0];
+                                const order = getStandingOrder(q.id, selections);
+                                return order.map((teamVal, index) => {
+                                  const teamLabel = q.options.find((o: any) => o.value === teamVal)?.label || "Unassigned";
+                                  const ouPick = selections[`ou_${teamVal?.toLowerCase()}`] || "-";
+                                  return (
+                                    <div
+                                      key={index}
+                                      className={`flex flex-col items-center justify-between p-2 sm:p-2.5 rounded-xl border text-center transition-all ${
+                                        index === 0
+                                          ? "bg-amber-950/20 border-amber-500/40 shadow-sm"
+                                          : "bg-slate-800/80 border-slate-700/60"
+                                      }`}
+                                      title={teamLabel}
+                                    >
+                                      <div className="flex items-center justify-center w-full">
+                                        <span className={`text-[10px] sm:text-[11px] font-mono font-black px-1.5 py-0.5 rounded-md ${
+                                          index === 0
+                                            ? "bg-amber-500/20 text-amber-300 border border-amber-500/30"
+                                            : "bg-slate-900/80 text-slate-400 border border-slate-700/50"
+                                        }`}>
+                                          #{index + 1}
+                                        </span>
+                                      </div>
+
+                                      <div className="w-9 h-9 sm:w-11 sm:h-11 flex items-center justify-center my-1.5 p-0.5">
+                                        {teamVal ? (
+                                          <img
+                                            src={`https://a.espncdn.com/i/teamlogos/nfl/500/${teamVal.toLowerCase()}.png`}
+                                            alt={teamLabel}
+                                            className="w-8 h-8 sm:w-10 sm:h-10 object-contain drop-shadow"
+                                            referrerPolicy="no-referrer"
+                                          />
+                                        ) : (
+                                          <div className="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center text-slate-600 font-bold text-xs">
+                                            ?
+                                          </div>
+                                        )}
+                                      </div>
+
+                                      <div className="w-full">
+                                        <span className={`inline-block font-mono text-[9px] sm:text-[10px] font-black px-1.5 py-0.5 rounded w-full truncate ${
+                                          ouPick === "OVER"
+                                            ? "text-emerald-300 bg-emerald-500/20 border border-emerald-500/40"
+                                            : ouPick === "UNDER"
+                                            ? "text-rose-300 bg-rose-500/20 border border-rose-500/40"
+                                            : "text-slate-500 bg-slate-900/60"
+                                        }`}>
+                                          O/U: {ouPick}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  );
+                                });
+                              })()}
+                            </div>
+                          )}
+
+                          {step.category !== 'standings' && (
                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                              {stepQuestions.map(q => {
                                const val = selections[q.id];

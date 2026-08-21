@@ -510,15 +510,50 @@ export default function StandingsTab({ pool, user, userPicks, categoryFilter = "
                       </span>
                     </div>
 
-                    <div className="flex justify-between items-center gap-2.5 pt-1">
-                      <span className={`text-xs font-bold ${userPick ? "text-white" : "text-slate-600 italic"}`}>
-                        {pickLabel}
-                      </span>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1">
+                      {q.category === "standings" && userPick ? (
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {userPick.split(",").map((t, idx) => {
+                            const officialParts = officialWinner ? officialWinner.split(",") : [];
+                            const isSlotHit = officialWinner ? officialParts[idx] === t : false;
+                            const opt = q.options.find((o) => o.value === t);
+                            const label = opt?.label || t;
+                            const std = nflStandings?.[t];
+                            return (
+                              <div key={idx} className="flex items-center gap-1">
+                                <div
+                                  className={`flex items-center gap-1.5 px-2 py-1 rounded-lg border transition-all ${
+                                    officialWinner
+                                      ? isSlotHit
+                                        ? "bg-emerald-950/60 border-emerald-500/60 text-emerald-300 shadow-[0_0_8px_rgba(16,185,129,0.2)]"
+                                        : "bg-slate-900 border-slate-700/60 text-slate-400 opacity-75"
+                                      : "bg-slate-800 border-slate-700 text-slate-200"
+                                  }`}
+                                  title={`${label}${std ? ` (${std.overallRecord})` : ""}`}
+                                >
+                                  <span className="text-[9px] text-slate-400 font-mono font-bold">#{idx + 1}</span>
+                                  <img
+                                    src={`https://a.espncdn.com/i/teamlogos/nfl/500/${t.toLowerCase()}.png`}
+                                    alt={label}
+                                    className="w-5 h-5 object-contain"
+                                    referrerPolicy="no-referrer"
+                                  />
+                                </div>
+                                {idx < 3 && <span className="text-slate-600 text-xs font-bold">&gt;</span>}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <span className={`text-xs font-bold ${userPick ? "text-white" : "text-slate-600 italic"}`}>
+                          {pickLabel}
+                        </span>
+                      )}
 
                       {/* Score icon indicators */}
                       {officialWinner ? (
                         q.category === "standings" ? (
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-1.5 shrink-0">
                             <span className="text-[9px] font-bold text-slate-400 bg-slate-800 px-2 py-0.5 rounded border border-slate-700">
                               {scoreText}
                             </span>
@@ -549,15 +584,32 @@ export default function StandingsTab({ pool, user, userPicks, categoryFilter = "
                     </div>
 
                     {officialWinner && !isCorrect && (
-                      <div className="text-[10px] text-slate-400 bg-slate-950/40 rounded px-2 py-1 mt-1 border-l-2 border-amber-500">
-                        {isDynamic ? "Projected" : "Official"}: <span className="font-semibold text-slate-200">
-                          {q.category === "standings"
-                            ? officialWinner.split(",").map(t => q.options.find(o => o.value === t)?.label.split(" ").pop() || t).join(" > ")
-                            : (q.options.find((o) => o.value === officialWinner)?.label || officialWinner)}
-                        </span>
+                      <div className="text-[10px] text-slate-400 bg-slate-950/40 rounded-lg px-2.5 py-1.5 mt-1.5 border-l-2 border-amber-500 flex items-center gap-2 flex-wrap">
+                        <span>{isDynamic ? "Projected" : "Official"}:</span>
+                        {q.category === "standings" ? (
+                          <div className="flex items-center gap-1 flex-wrap">
+                            {officialWinner.split(",").map((t, idx) => (
+                              <div key={idx} className="flex items-center gap-1">
+                                <div className="flex items-center gap-1 bg-slate-900 px-1.5 py-0.5 rounded border border-slate-700/60" title={q.options.find(o => o.value === t)?.label || t}>
+                                  <span className="text-[9px] text-slate-500 font-mono">#{idx + 1}</span>
+                                  <img
+                                    src={`https://a.espncdn.com/i/teamlogos/nfl/500/${t.toLowerCase()}.png`}
+                                    alt={t}
+                                    className="w-4 h-4 object-contain"
+                                    referrerPolicy="no-referrer"
+                                  />
+                                </div>
+                                {idx < 3 && <span className="text-slate-600 text-[10px] font-bold">&gt;</span>}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="font-semibold text-slate-200">
+                            {q.options.find((o) => o.value === officialWinner)?.label || officialWinner}
+                          </span>
+                        )}
                       </div>
-                    )}
-                  </div>
+                    )}                  </div>
                 );
               })}
             </div>
