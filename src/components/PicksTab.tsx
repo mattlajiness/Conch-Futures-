@@ -14,6 +14,7 @@ interface PicksTabProps {
   user: AuthUser;
   userPicks: Picks | null;
   onPicksSaved: (newPicks: Picks) => void;
+  onNavigateToStandings?: () => void;
   categoryFilter?: string;
   nflStandings?: Record<string, TeamStandingInfo>;
 }
@@ -33,7 +34,7 @@ const WIZARD_STEPS = [
   { id: 'submit', label: 'Review & Submit', category: 'submit' }
 ];
 
-export default function PicksTab({ pool, user, userPicks, onPicksSaved, nflStandings }: PicksTabProps) {
+export default function PicksTab({ pool, user, userPicks, onPicksSaved, onNavigateToStandings, nflStandings }: PicksTabProps) {
   const [selections, setSelections] = useState<Record<string, string>>({});
   const [tiebreaker, setTiebreaker] = useState<string>("");
   const [saving, setSaving] = useState(false);
@@ -262,6 +263,7 @@ export default function PicksTab({ pool, user, userPicks, onPicksSaved, nflStand
       ...prev,
       [questionId]: value,
     }));
+    if (message?.type === "success") setMessage(null);
   };
 
 
@@ -298,7 +300,7 @@ export default function PicksTab({ pool, user, userPicks, onPicksSaved, nflStand
         tiebreaker,
         updatedAt: serverTimestamp(),
       });
-      setMessage({ type: "success", text: "Picks locked in securely!" });
+      setMessage({ type: "success", text: "Your picks have been saved successfully!" });
       onPicksSaved(newPicks);
     } catch (err: any) {
       console.error(err);
@@ -990,7 +992,7 @@ export default function PicksTab({ pool, user, userPicks, onPicksSaved, nflStand
                      type="number"
                      min="0"
                      value={tiebreaker}
-                     onChange={(e) => setTiebreaker(e.target.value)}
+                     onChange={(e) => { setTiebreaker(e.target.value); if (message?.type === "success") setMessage(null); }}
                      placeholder="e.g. 52"
                      className="w-full sm:w-1/2 bg-slate-900 border border-slate-700/80 rounded-lg px-4 py-3 text-white font-mono text-lg focus:outline-none focus:border-teal-500 transition-colors"
                    />
@@ -1004,14 +1006,26 @@ export default function PicksTab({ pool, user, userPicks, onPicksSaved, nflStand
                  </div>
                )}
 
-               <button
-                 onClick={handleSave}
-                 disabled={saving || answeredCount === 0 || !tiebreaker}
-                 className="w-full flex items-center justify-center gap-2 py-4 bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-400 hover:to-cyan-400 text-slate-950 font-extrabold rounded-xl shadow-lg disabled:opacity-50 transition-all cursor-pointer text-lg"
-               >
-                 <Save className="w-5 h-5" />
-                 {saving ? "Locking in..." : "Lock In My Picks"}
-               </button>
+               {message?.type === "success" && onNavigateToStandings ? (
+                 <div className="flex flex-col mt-4">
+                   <button
+                     onClick={onNavigateToStandings}
+                     className="w-full flex items-center justify-center gap-2 py-4 bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-400 hover:to-purple-400 text-white font-extrabold rounded-xl shadow-lg transition-all cursor-pointer text-lg"
+                   >
+                     Return to Group
+                     <Trophy className="w-5 h-5 ml-1" />
+                   </button>
+                 </div>
+               ) : (
+                 <button
+                   onClick={handleSave}
+                   disabled={saving || answeredCount === 0 || !tiebreaker}
+                   className="w-full flex items-center justify-center gap-2 py-4 bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-400 hover:to-cyan-400 text-slate-950 font-extrabold rounded-xl shadow-lg disabled:opacity-50 transition-all cursor-pointer text-lg"
+                 >
+                   <Save className="w-5 h-5" />
+                   {saving ? "Saving picks..." : "Save My Picks"}
+                 </button>
+               )}
                {(!tiebreaker) && (
                  <p className="text-rose-400 text-xs text-center mt-3 font-semibold">Please enter a tiebreaker score to submit.</p>
                )}

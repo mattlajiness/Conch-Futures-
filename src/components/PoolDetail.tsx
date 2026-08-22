@@ -463,6 +463,7 @@ export default function PoolDetail({ pool: initialPool, user, onBack }: PoolDeta
               user={user}
               userPicks={userPicks}
               onPicksSaved={(newPicks) => setUserPicks(newPicks)}
+              onNavigateToStandings={() => setActiveTab("standings")}
               categoryFilter={categoryFilter}
               nflStandings={nflStandings || undefined}
             />
