@@ -62,9 +62,11 @@ export default function ComparePicksTab({ pool, categoryFilter = "all", nflStand
     }
   };
 
+  // See StandingsTab: key on the id so a pool-doc snapshot doesn't re-read
+  // every pick document in the pool for every connected viewer.
   useEffect(() => {
     fetchPicks();
-  }, [pool]);
+  }, [pool.id]);
 
   const selectedQuestion = activeQuestionsList.find((q) => q.id === selectedQuestionId) || filteredQuestions[0] || activeQuestionsList[0] || FUTURES_QUESTIONS[0];
 

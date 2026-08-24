@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { X, DollarSign, Save, Receipt, Sparkles, Check, AlertCircle, ExternalLink, Copy, ShieldCheck, Clock, Trophy } from "lucide-react";
 import { Pool } from "../types";
 import { doc, updateDoc } from "firebase/firestore";
-import { db, handleFirestoreError, OperationType } from "../lib/firebase";
+import { db, formatFirestoreError, OperationType } from "../lib/firebase";
 
 interface PaymentInfoModalProps {
   isOpen: boolean;
@@ -103,8 +103,7 @@ export default function PaymentInfoModal({
       }, 800);
     } catch (err: any) {
       console.error("Error saving payment info:", err);
-      setError("Failed to save payment info. Please check your connection.");
-      handleFirestoreError(err, OperationType.UPDATE, path);
+      setError(formatFirestoreError(err, OperationType.UPDATE, path));
     } finally {
       setSaving(false);
     }

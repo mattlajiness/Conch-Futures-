@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { ArrowLeft, Award, Users, Save, MessageSquare, Sparkles, Settings, Copy, Check, Share2, RefreshCw, Search, History, Clock, Timer, CircleDollarSign, User, Receipt, Edit3, DollarSign, ExternalLink } from "lucide-react";
 import PaymentInfoModal from "./PaymentInfoModal";
 import { Pool, Picks } from "../types";
-import { doc, getDoc, onSnapshot, updateDoc, serverTimestamp, collection } from "firebase/firestore";
+import { doc, getDoc, onSnapshot, updateDoc, serverTimestamp, collection, getCountFromServer } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import { AuthUser } from "../lib/auth";
 import StandingsTab from "./StandingsTab";
@@ -122,13 +122,27 @@ export default function PoolDetail({ pool: initialPool, user, onBack }: PoolDeta
   const [loadingStandings, setLoadingStandings] = useState(false);
   const [memberCount, setMemberCount] = useState<number>(0);
 
-  // Subscribe to pool picks count for live entries & total pot
-  useEffect(() => {
-    const unsubPicks = onSnapshot(collection(db, `pools/${initialPool.id}/picks`), (snapshot) => {
-      setMemberCount(snapshot.size);
-    });
-    return () => unsubPicks();
+  // Member count for live entries & total pot.
+  //
+  // This was an onSnapshot over the whole picks collection, which streamed
+  // every member's full pick document to every viewer continuously — just to
+  // read snapshot.size. Every autosave by any member re-delivered that document
+  // to everyone else, each delivery billed as a read, which is worst exactly
+  // during the pre-deadline rush. getCountFromServer is one read.
+  const refreshMemberCount = useCallback(async () => {
+    try {
+      const snap = await getCountFromServer(
+        collection(db, `pools/${initialPool.id}/picks`)
+      );
+      setMemberCount(snap.data().count);
+    } catch (err) {
+      console.warn("Failed to load member count", err);
+    }
   }, [initialPool.id]);
+
+  useEffect(() => {
+    refreshMemberCount();
+  }, [refreshMemberCount]);
 
   // Subscribe to real-time pool document updates to capture results updates instantly
   useEffect(() => {
@@ -577,7 +591,12 @@ export default function PoolDetail({ pool: initialPool, user, onBack }: PoolDeta
               pool={pool}
               user={user}
               userPicks={userPicks}
-              onPicksSaved={(newPicks) => setUserPicks(newPicks)}
+              onPicksSaved={(newPicks) => {
+                setUserPicks(newPicks);
+                // A first save can be what creates this user's pick document,
+                // which is also the membership record the count reads.
+                refreshMemberCount();
+              }}
               onNavigateToStandings={() => setActiveTab("standings")}
               categoryFilter={categoryFilter}
               nflStandings={nflStandings || undefined}

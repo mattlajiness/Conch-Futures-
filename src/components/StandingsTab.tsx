@@ -167,9 +167,13 @@ export default function StandingsTab({ pool, user, userPicks, categoryFilter = "
     }
   };
 
+  // Keyed on pool.id, not `pool`: PoolDetail replaces the pool object on every
+  // snapshot, so depending on the object re-read every pick in the pool for
+  // every viewer each time an admin touched anything. Results still render
+  // fresh because they are read from `pool` during render.
   useEffect(() => {
     fetchStandings();
-  }, [pool]);
+  }, [pool.id]);
 
   const getRankBadge = (index: number) => {
     if (index === 0) return <span className="p-1.5 bg-amber-500/10 rounded-lg text-amber-400 font-bold border border-amber-500/25 flex items-center gap-1 text-xs"><Medal className="w-3.5 h-3.5" /> 1st</span>;

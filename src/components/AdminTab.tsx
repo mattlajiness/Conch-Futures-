@@ -30,7 +30,7 @@ import {
   Shield
 } from "lucide-react";
 import { doc, updateDoc, collection, getDocs, deleteDoc } from "firebase/firestore";
-import { db, OperationType, handleFirestoreError } from "../lib/firebase";
+import { db, OperationType, formatFirestoreError } from "../lib/firebase";
 import { useAuth } from "../lib/auth";
 import { Pool, PoolDuesPayment } from "../types";
 
@@ -209,8 +209,7 @@ export default function AdminTab({ pool, onPoolUpdated, categoryFilter = "all", 
       setMessage({ type: "success", text: "League buy-in fee and payment instructions saved!" });
       setTimeout(() => setMessage(null), 4000);
     } catch (err) {
-      setMessage({ type: "error", text: "Failed to save buy-in settings. Please try again." });
-      handleFirestoreError(err, OperationType.UPDATE, path);
+      setMessage({ type: "error", text: formatFirestoreError(err, OperationType.UPDATE, path) });
     } finally {
       setSavingDuesSettings(false);
     }
@@ -292,8 +291,7 @@ export default function AdminTab({ pool, onPoolUpdated, categoryFilter = "all", 
       setMessage({ type: "success", text: "League dues payment statuses saved successfully!" });
       setTimeout(() => setMessage(null), 4000);
     } catch (err) {
-      setMessage({ type: "error", text: "Failed to update dues payment statuses." });
-      handleFirestoreError(err, OperationType.UPDATE, path);
+      setMessage({ type: "error", text: formatFirestoreError(err, OperationType.UPDATE, path) });
     } finally {
       setSavingDuesStatus(false);
     }
@@ -422,8 +420,7 @@ export default function AdminTab({ pool, onPoolUpdated, categoryFilter = "all", 
       setMessage({ type: "success", text: "Official results updated! Leaderboard scores recalculated in real-time." });
       setTimeout(() => setMessage(null), 4000);
     } catch (err) {
-      setMessage({ type: "error", text: "Failed to update results. Please try again." });
-      handleFirestoreError(err, OperationType.UPDATE, path);
+      setMessage({ type: "error", text: formatFirestoreError(err, OperationType.UPDATE, path) });
     } finally {
       setSavingResults(false);
     }
@@ -495,8 +492,7 @@ export default function AdminTab({ pool, onPoolUpdated, categoryFilter = "all", 
       setMessage({ type: "success", text: "Pool question configuration locked in successfully!" });
       setTimeout(() => setMessage(null), 4000);
     } catch (err) {
-      setMessage({ type: "error", text: "Failed to update question config." });
-      handleFirestoreError(err, OperationType.UPDATE, path);
+      setMessage({ type: "error", text: formatFirestoreError(err, OperationType.UPDATE, path) });
     } finally {
       setSavingConfig(false);
     }

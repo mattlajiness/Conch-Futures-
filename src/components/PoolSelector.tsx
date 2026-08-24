@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { collection, collectionGroup, query, where, getDocs, doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
+import { collection, collectionGroup, query, where, getDocs, doc, setDoc, getDoc, serverTimestamp, limit } from "firebase/firestore";
 import { Trophy, Plus, LogIn, Lock, Users, ArrowRight, AlertCircle, Sparkles, Heart, Activity, UserPlus, CheckCircle2, Edit3, Shield, CircleDollarSign, Copy, Check } from "lucide-react";
-import { db, OperationType, handleFirestoreError } from "../lib/firebase";
+import { db, OperationType, formatFirestoreError } from "../lib/firebase";
 import { AuthUser } from "../lib/auth";
 import { FUTURES_QUESTIONS } from "../constants";
 import { Pool } from "../types";
@@ -62,6 +62,11 @@ export default function PoolSelector({ user, onSelectPool }: PoolSelectorProps) 
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [loadingActivities, setLoadingActivities] = useState(false);
 
+  // Keyed on a stable id string rather than the `pools` array: fetchPools()
+  // returns a fresh array identity every call, which re-ran this whole scan —
+  // every pick document of every pool the user is in — each time.
+  const poolIdsKey = pools.map((p) => p.id).sort().join(",");
+
   useEffect(() => {
     if (pools.length === 0) return;
 
@@ -71,7 +76,13 @@ export default function PoolSelector({ user, onSelectPool }: PoolSelectorProps) 
         const feed: ActivityItem[] = [];
         const memberCountsMap: Record<string, number> = {};
 
-        for (const pool of pools) {
+        // Was a sequential await inside the loop, so the dashboard blocked for
+        // the sum of every pool's read instead of the slowest one.
+        const pickSnapsByPool = await Promise.all(
+          pools.map((pool) => getDocs(query(collection(db, `pools/${pool.id}/picks`))))
+        );
+
+        pools.forEach((pool, poolIndex) => {
           if (pool.createdAt) {
             const createdAt = pool.createdAt?.toDate ? pool.createdAt.toDate() : new Date();
             feed.push({
@@ -83,9 +94,8 @@ export default function PoolSelector({ user, onSelectPool }: PoolSelectorProps) 
             });
           }
 
-          const picksQuery = query(collection(db, `pools/${pool.id}/picks`));
-          const pickSnaps = await getDocs(picksQuery);
-          
+          const pickSnaps = pickSnapsByPool[poolIndex];
+
           let userPicksCount = 0;
           pickSnaps.forEach(docSnap => {
             const data = docSnap.data();
@@ -108,7 +118,7 @@ export default function PoolSelector({ user, onSelectPool }: PoolSelectorProps) 
             }
           });
           memberCountsMap[pool.id] = userPicksCount;
-        }
+        });
 
         feed.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
         setActivities(feed.slice(0, 10));
@@ -121,7 +131,7 @@ export default function PoolSelector({ user, onSelectPool }: PoolSelectorProps) 
     };
 
     loadActivities();
-  }, [pools]);
+  }, [poolIdsKey]);
 
   // Join Pool State
   const [joinCode, setJoinCode] = useState("");
@@ -178,7 +188,8 @@ export default function PoolSelector({ user, onSelectPool }: PoolSelectorProps) 
     try {
       const poolQuery = query(
         collection(db, "pools"),
-        where("code", "==", formattedCode)
+        where("code", "==", formattedCode),
+        limit(1)
       );
       const querySnap = await getDocs(poolQuery);
 
@@ -223,11 +234,14 @@ export default function PoolSelector({ user, onSelectPool }: PoolSelectorProps) 
   }, [user.uid]);
 
   // Every pool this user has joined, found from the pick documents they own.
-  // The collection-group query needs the COLLECTION_GROUP index on
-  // picks.userId (see firestore.indexes.json); while that index is still
-  // building Firestore rejects the query, so fall back to scanning the pools
-  // collection — same answer, just more reads. Returns null when neither path
-  // works, so the caller knows the result isn't authoritative.
+  // Needs the COLLECTION_GROUP index on picks.userId (see firestore.indexes.json).
+  //
+  // This used to fall back to reading the entire `pools` collection and probing
+  // each one for the user's pick doc. That is O(every pool in the database) per
+  // sign-in, and it fires precisely when Firestore is already unhappy — so load
+  // would amplify itself. The fallback is now the localStorage cache, which
+  // costs nothing. Returns null when the query fails, so the caller knows the
+  // result isn't authoritative and must not re-seed the cache from it.
   const fetchJoinedPoolIds = async (): Promise<string[] | null> => {
     try {
       const picksSnap = await getDocs(
@@ -238,21 +252,6 @@ export default function PoolSelector({ user, onSelectPool }: PoolSelectorProps) 
         .filter((id): id is string => Boolean(id));
     } catch (groupErr) {
       console.warn("Picks collection-group query unavailable", groupErr);
-    }
-
-    try {
-      const poolsSnap = await getDocs(collection(db, "pools"));
-      const ids = await Promise.all(
-        poolsSnap.docs.map(async (poolDoc) => {
-          const pick = await getDoc(
-            doc(db, `pools/${poolDoc.id}/picks`, user.uid)
-          );
-          return pick.exists() ? poolDoc.id : null;
-        })
-      );
-      return ids.filter((id): id is string => Boolean(id));
-    } catch (scanErr) {
-      console.warn("Pool membership scan failed", scanErr);
       return null;
     }
   };
@@ -292,7 +291,15 @@ export default function PoolSelector({ user, onSelectPool }: PoolSelectorProps) 
       setPools(found);
       // Re-seed the warm cache only from an authoritative read, so a pool the
       // user actually left doesn't linger forever.
-      if (joinedIds) cachePoolIds(found.map((p) => p.id));
+      if (joinedIds) {
+        cachePoolIds(found.map((p) => p.id));
+      } else {
+        // Showing this device's cache. Say so rather than letting a pool the
+        // user joined elsewhere look like it was deleted.
+        setError(
+          "We couldn't refresh your pools just now, so this list may be incomplete. Try again in a moment."
+        );
+      }
     } catch (err) {
       console.error(err);
       setError("Failed to load your pools. Please try again.");
@@ -314,13 +321,34 @@ export default function PoolSelector({ user, onSelectPool }: PoolSelectorProps) 
 
     const generatedId = "pool_" + Math.random().toString(36).substr(2, 9);
     const poolPath = `pools/${generatedId}`;
+    const formattedCode = newCode.trim().toUpperCase();
+
+    // Join codes are how members find a pool, and share links carry the code
+    // rather than the pool id — so two pools with the same code send invitees
+    // to whichever document Firestore happens to return first. Reject the
+    // collision at creation, where we can still ask for a different code.
+    try {
+      const existing = await getDocs(
+        query(collection(db, "pools"), where("code", "==", formattedCode), limit(1))
+      );
+      if (!existing.empty) {
+        setError(`The code "${formattedCode}" is already taken. Please choose another.`);
+        setCreating(false);
+        return;
+      }
+    } catch (codeErr) {
+      console.error("Could not verify join code uniqueness", codeErr);
+      setError("Could not verify that join code. Please try again.");
+      setCreating(false);
+      return;
+    }
 
     const parsedFee = Math.max(0, Number(newEntryFee) || 0);
     const newPoolData = {
       id: generatedId,
       name: newName.trim(),
       description: newDesc.trim() || "",
-      code: newCode.trim().toUpperCase(),
+      code: formattedCode,
       creatorId: user.uid,
       creatorName: user.displayName || "Unknown User",
       createdAt: serverTimestamp(),
@@ -359,7 +387,7 @@ export default function PoolSelector({ user, onSelectPool }: PoolSelectorProps) 
       
       onSelectPool(completePool);
     } catch (err) {
-      handleFirestoreError(err, OperationType.CREATE, poolPath);
+      setError(formatFirestoreError(err, OperationType.CREATE, poolPath));
     } finally {
       setCreating(false);
     }
@@ -377,7 +405,8 @@ export default function PoolSelector({ user, onSelectPool }: PoolSelectorProps) 
       // Find the pool with this join code
       const poolQuery = query(
         collection(db, "pools"),
-        where("code", "==", formattedCode)
+        where("code", "==", formattedCode),
+        limit(1)
       );
       const querySnap = await getDocs(poolQuery);
 

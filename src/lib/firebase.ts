@@ -88,7 +88,45 @@ export interface FirestoreErrorInfo {
   };
 }
 
-export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+// Short, user-safe copy per Firestore error code. Everything diagnostic goes to
+// the console; nothing here leaks the caller's identity or the document path.
+function userMessageFor(error: unknown, operationType: OperationType): string {
+  const code = (error as { code?: string })?.code ?? "";
+  const writing = operationType !== OperationType.GET && operationType !== OperationType.LIST;
+
+  switch (code) {
+    case "permission-denied":
+      return "You don't have permission to do that. If this looks wrong, refresh and try again.";
+    case "unavailable":
+    case "deadline-exceeded":
+      return "We couldn't reach the server. Check your connection and try again.";
+    case "resource-exhausted":
+      return "The app is busy right now. Please wait a moment and try again.";
+    case "failed-precondition":
+      return "That didn't go through. Refresh the page and try again.";
+    case "not-found":
+      return "We couldn't find that — it may have been deleted.";
+    default:
+      return writing
+        ? "Something went wrong saving your changes. Please try again."
+        : "Something went wrong loading that. Please try again.";
+  }
+}
+
+/**
+ * Logs the full diagnostic payload and returns a short message safe to render.
+ *
+ * This deliberately does NOT throw. The previous `handleFirestoreError` threw,
+ * but every call site used it as if it returned a string — so the throw escaped
+ * from inside the `catch` block, the error message was never displayed, and the
+ * user watched a spinner stop with no explanation. It also stringified the
+ * user's email and uid into text meant for the screen.
+ */
+export function formatFirestoreError(
+  error: unknown,
+  operationType: OperationType,
+  path: string | null
+): string {
   const errInfo: FirestoreErrorInfo = {
     error: error instanceof Error ? error.message : String(error),
     authInfo: {
@@ -106,5 +144,5 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
     path
   };
   console.error('Firestore Error: ', JSON.stringify(errInfo));
-  throw new Error(JSON.stringify(errInfo));
+  return userMessageFor(error, operationType);
 }
