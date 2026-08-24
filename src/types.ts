@@ -20,6 +20,7 @@ export interface Pool {
   customPoints?: Record<string, number>; // Optional custom points mapping
   entryFee?: number;
   duesNote?: string;
+  payouts?: string[];
   payments?: Record<string, PoolDuesPayment>;
   coAdmins?: string[];
 }

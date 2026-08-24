@@ -27,6 +27,7 @@ export default function PaymentInfoModal({
 }: PaymentInfoModalProps) {
   const [entryFee, setEntryFee] = useState<number | string>(pool.entryFee !== undefined ? pool.entryFee : 0);
   const [duesNote, setDuesNote] = useState<string>(pool.duesNote || "");
+  const [payouts, setPayouts] = useState<string[]>(pool.payouts || []);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -37,6 +38,7 @@ export default function PaymentInfoModal({
     if (isOpen) {
       setEntryFee(pool.entryFee !== undefined ? pool.entryFee : 0);
       setDuesNote(pool.duesNote || "");
+      setPayouts(pool.payouts || []);
       setError(null);
       setSuccess(false);
       setCopied(false);
@@ -79,15 +81,18 @@ export default function PaymentInfoModal({
     const path = `pools/${pool.id}`;
 
     try {
+      const cleanedPayouts = payouts.filter(p => p.trim() !== "");
       await updateDoc(doc(db, path), {
         entryFee: feeNum,
         duesNote: cleanedNote,
+        payouts: cleanedPayouts,
       });
 
       const updatedPool: Pool = {
         ...pool,
         entryFee: feeNum,
         duesNote: cleanedNote,
+        payouts: cleanedPayouts,
       };
 
       onPoolUpdated(updatedPool);
@@ -242,6 +247,48 @@ export default function PaymentInfoModal({
                   placeholder="e.g. Venmo: @commissioner | CashApp: $mytag | Due before Week 1 kickoff! Please include your team name in the payment memo."
                   className="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-white text-xs leading-relaxed focus:outline-none focus:border-emerald-500 transition-colors resize-none placeholder:text-slate-600"
                 />
+              </div>
+
+              <div className="space-y-2 pt-2 border-t border-slate-800">
+                <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block">
+                  Payouts (1st, 2nd, etc.)
+                </label>
+                {payouts.map((p, i) => (
+                  <div key={i} className="flex gap-2">
+                    <span className="bg-slate-800 text-slate-400 w-10 py-2 rounded-xl text-[10px] font-bold flex items-center justify-center uppercase tracking-wider">
+                      {i + 1}{i === 0 ? "st" : i === 1 ? "nd" : i === 2 ? "rd" : "th"}
+                    </span>
+                    <input
+                      type="text"
+                      value={p}
+                      onChange={(e) => {
+                        const newPayouts = [...payouts];
+                        newPayouts[i] = e.target.value;
+                        setPayouts(newPayouts);
+                      }}
+                      placeholder={i === 0 ? "e.g. 70% or $300" : i === 1 ? "e.g. 20% or $100" : "e.g. $50 or Money Back"}
+                      className="flex-1 bg-slate-950 border border-slate-700/80 rounded-xl px-3.5 py-2 text-white text-xs focus:outline-none focus:border-emerald-500 transition-colors"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newPayouts = [...payouts];
+                        newPayouts.splice(i, 1);
+                        setPayouts(newPayouts);
+                      }}
+                      className="px-2.5 text-rose-400 hover:bg-rose-500/10 rounded-xl transition-colors flex items-center justify-center"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setPayouts([...payouts, ""])}
+                  className="text-xs text-emerald-400 font-bold hover:text-emerald-300 transition-colors inline-block mt-1"
+                >
+                  + Add Payout Tier
+                </button>
               </div>
 
               {/* Preset Quick Insertion Tags */}

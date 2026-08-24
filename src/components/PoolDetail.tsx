@@ -310,7 +310,7 @@ export default function PoolDetail({ pool: initialPool, user, onBack }: PoolDeta
 
                 {(pool.entryFee || 0) > 0 && (
                   <span className="text-slate-400 font-normal">
-                    • Winner gets: <strong className="text-white font-mono font-bold hover:text-emerald-300 underline decoration-emerald-500/50 underline-offset-2 transition-colors">${(pool.entryFee || 0) * Math.max(memberCount, 1)}</strong>
+                    • Pot: <strong className="text-white font-mono font-bold hover:text-emerald-300 underline decoration-emerald-500/50 underline-offset-2 transition-colors">${(pool.entryFee || 0) * Math.max(memberCount, 1)}</strong>
                   </span>
                 )}
 

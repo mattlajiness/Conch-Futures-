@@ -85,12 +85,18 @@ export default function PoolSelector({ user, onSelectPool }: PoolSelectorProps) 
 
           const picksQuery = query(collection(db, `pools/${pool.id}/picks`));
           const pickSnaps = await getDocs(picksQuery);
-          memberCountsMap[pool.id] = pickSnaps.size;
+          
+          let userPicksCount = 0;
           pickSnaps.forEach(docSnap => {
             const data = docSnap.data();
+            const isJoin = !data.selections || Object.keys(data.selections).length === 0;
+            
+            if (docSnap.id === user.uid && data.selections) {
+              userPicksCount = Object.keys(data.selections).filter(k => !!data.selections[k] && (!k.startsWith("standings_") || data.selections[k].split(",").length === 4)).length;
+            }
+            
             if (data.updatedAt) {
                const ts = data.updatedAt?.toDate ? data.updatedAt.toDate() : new Date();
-               const isJoin = !data.selections || Object.keys(data.selections).length === 0;
                
                feed.push({
                  id: `pick_${pool.id}_${docSnap.id}`,
@@ -101,6 +107,7 @@ export default function PoolSelector({ user, onSelectPool }: PoolSelectorProps) 
                });
             }
           });
+          memberCountsMap[pool.id] = userPicksCount;
         }
 
         feed.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
@@ -633,9 +640,9 @@ export default function PoolSelector({ user, onSelectPool }: PoolSelectorProps) 
                           }}
                         >
                           <div className="flex items-center gap-1.5 text-slate-300 font-medium text-xs">
-                            <Users className="w-3.5 h-3.5 text-teal-400/70" />
+                            <CheckCircle2 className="w-3.5 h-3.5 text-teal-400/70" />
                             <span>
-                              {poolMemberCounts[pool.id] || 0} {poolMemberCounts[pool.id] === 1 ? "Pick" : "Picks"}
+                              {poolMemberCounts[pool.id] || 0} / {FUTURES_QUESTIONS.length} Picks
                             </span>
                           </div>
 
