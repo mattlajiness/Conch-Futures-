@@ -14,6 +14,7 @@ import LastYearResultsTab from "./LastYearResultsTab";
 import ProfileTab from "./ProfileTab";
 import { fetchNflStandings, TeamStandingInfo } from "../lib/nflApi";
 import { FUTURES_QUESTIONS } from "../constants";
+import { trackScreenView } from "../lib/analytics";
 
 interface PoolDetailProps {
   pool: Pool;
@@ -22,6 +23,17 @@ interface PoolDetailProps {
 }
 
 type TabType = "standings" | "my_picks" | "compare" | "admin" | "last_year" | "chat" | "profile";
+
+/** Tab labels for the GA "Pages and screens" report. */
+const TAB_TITLES: Record<TabType, string> = {
+  standings: "Standings",
+  my_picks: "My Picks",
+  compare: "Compare Picks",
+  admin: "Admin",
+  last_year: "Last Year",
+  chat: "Chat",
+  profile: "Profile",
+};
 
 export function getAppShareUrl(code: string): string {
   const defaultPublicUrl = "https://ais-pre-xfiomcrem6vpcrlcdoi546-387114323884.us-east1.run.app";
@@ -107,6 +119,15 @@ export default function PoolDetail({ pool: initialPool, user, onBack }: PoolDeta
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [duesNoteCopied, setDuesNoteCopied] = useState(false);
+
+  // Each tab is its own screen in GA, since the predictor has no URL routing.
+  useEffect(() => {
+    trackScreenView(
+      `/predictor/pool/${activeTab}`,
+      `Predictor — ${TAB_TITLES[activeTab]}`,
+      { pool_id: pool.id },
+    );
+  }, [activeTab, pool.id]);
 
   const handleCopyDuesNote = async () => {
     if (!pool.duesNote) return;
