@@ -43,35 +43,35 @@ export async function syncUserProfileAcrossAllPools(
       console.warn("Picks collection-group query unavailable:", e);
     }
 
-    // Pools they created but have no pick document in, plus a safety net while
-    // the picks collection-group index is still building.
+    // Pools they created but have no pick document in. This used to read the
+    // whole `pools` collection as a safety net for the still-building picks
+    // index, which made one profile save cost two reads per pool IN THE ENTIRE
+    // DATABASE — not per pool the user is in. A creatorId-filtered query
+    // answers the same question at the user's own scale.
+    const createdPools = new Map<string, string>(); // poolId -> current creatorName
     try {
-      const poolsSnap = await getDocs(collection(db, "pools"));
-      poolsSnap.docs.forEach((d) => poolIdsSet.add(d.id));
+      const createdSnap = await getDocs(
+        query(collection(db, "pools"), where("creatorId", "==", userId))
+      );
+      createdSnap.docs.forEach((d) => {
+        poolIdsSet.add(d.id);
+        createdPools.set(d.id, d.data().creatorName);
+      });
     } catch (e) {
-      console.warn("Could not query all pools collection:", e);
+      console.warn("Could not query pools created by user:", e);
     }
 
     // 2. Loop through all known pool IDs and synchronize pick documents
     const poolIds = Array.from(poolIdsSet);
     const updatePromises = poolIds.map(async (poolId) => {
       try {
-        const poolDocRef = doc(db, "pools", poolId);
-        const poolSnap = await getDoc(poolDocRef);
-
-        if (poolSnap.exists()) {
-          const poolData = poolSnap.data();
-
-          // If user is creator, update creatorName
-          if (poolData.creatorId === userId && poolData.creatorName !== cleanName) {
-            try {
-              await updateDoc(poolDocRef, {
-                creatorName: cleanName,
-                updatedAt: serverTimestamp(),
-              });
-            } catch (err) {
-              console.debug(`Failed to update creator name on pool ${poolId}:`, err);
-            }
+        // The creator query above already told us which pools this user created
+        // and what name they currently carry, so no per-pool read is needed.
+        if (createdPools.has(poolId) && createdPools.get(poolId) !== cleanName) {
+          try {
+            await updateDoc(doc(db, "pools", poolId), { creatorName: cleanName });
+          } catch (err) {
+            console.debug(`Failed to update creator name on pool ${poolId}:`, err);
           }
         }
 

@@ -26,7 +26,14 @@ service cloud.firestore {
              && (!pool.keys().hasAny(['entryFee']) || (pool.entryFee is number || pool.entryFee is int || pool.entryFee is float))
              && (!pool.keys().hasAny(['duesNote']) || (pool.duesNote is string && pool.duesNote.size() <= 1000))
              && (!pool.keys().hasAny(['payments']) || pool.payments is map)
-             && (!pool.keys().hasAny(['coAdmins']) || pool.coAdmins is list);
+             && (!pool.keys().hasAny(['coAdmins']) || pool.coAdmins is list)
+             && (!pool.keys().hasAny(['payouts']) || pool.payouts is list);
+    }
+    function isPoolCreator(pool) {
+      return request.auth.uid == pool.creatorId;
+    }
+    function isPoolCoAdmin(pool) {
+      return pool.keys().hasAny(['coAdmins']) && request.auth.uid in pool.coAdmins;
     }
     function isValidPicks(picks) {
       return picks.keys().hasAll(['userId', 'userDisplayName', 'selections', 'updatedAt'])
@@ -50,12 +57,18 @@ service cloud.firestore {
                     && request.resource.data.createdAt == request.time;
       allow update: if isValidPool(request.resource.data)
                     && isSignedIn()
-                    && (request.auth.uid == resource.data.creatorId || (resource.data.keys().hasAny(['coAdmins']) && request.auth.uid in resource.data.coAdmins))
+                    && (isPoolCreator(resource.data) || isPoolCoAdmin(resource.data))
                     && request.resource.data.creatorId == resource.data.creatorId
                     && request.resource.data.createdAt == resource.data.createdAt
-                    && (
-                      request.resource.data.diff(resource.data).affectedKeys().hasOnly(['results', 'activeQuestions', 'name', 'description', 'code', 'tiebreakerResult', 'customPoints', 'deadline', 'entryFee', 'duesNote', 'payments', 'coAdmins'])
-                    );
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['results', 'activeQuestions', 'name', 'description', 'code', 'tiebreakerResult', 'customPoints', 'deadline', 'entryFee', 'duesNote', 'payments', 'payouts', 'creatorName', 'coAdmins'])
+                    // Only the creator decides who is an admin. Without this a co-admin
+                    // could promote others, demote peers, or lock the creator out.
+                    && (isPoolCreator(resource.data)
+                        || !request.resource.data.diff(resource.data).affectedKeys().hasAny(['coAdmins']))
+                    // creatorName is the creator's own display name, synced by profileSync.
+                    && (isPoolCreator(resource.data)
+                        || !request.resource.data.diff(resource.data).affectedKeys().hasAny(['creatorName']));
       allow delete: if isSignedIn()
                     && request.auth.uid == resource.data.creatorId;
       match /picks/{userId} {

@@ -28,9 +28,12 @@ export default function ChatTab({ pool, user }: ChatTabProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    // Descending + limit gets the NEWEST 100. Ascending + limit pinned the
+    // window to the OLDEST 100, so once a pool passed 100 messages nobody saw
+    // anything new again. Reverse back to chronological order for rendering.
     const q = query(
       collection(db, `pools/${pool.id}/messages`),
-      orderBy("createdAt", "asc"),
+      orderBy("createdAt", "desc"),
       limit(100)
     );
 
@@ -39,7 +42,7 @@ export default function ChatTab({ pool, user }: ChatTabProps) {
       snapshot.forEach((doc) => {
         fetchedMessages.push({ id: doc.id, ...doc.data() } as ChatMessage);
       });
-      setMessages(fetchedMessages);
+      setMessages(fetchedMessages.reverse());
     });
 
     return () => unsubscribe();

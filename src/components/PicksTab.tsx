@@ -3,7 +3,7 @@ import { FUTURES_QUESTIONS, NFL_TEAMS_ALL, AFC_TEAMS, NFC_TEAMS, NFL_WIN_TOTALS 
 import { Save, Check, Award, Compass, ShieldAlert, Zap, ListOrdered, GripVertical, Trophy, ChevronRight, ChevronLeft, ChevronUp, ChevronDown, Sparkles } from "lucide-react";
 import { doc, setDoc, serverTimestamp, collectionGroup, query, where, getDocs, getDoc } from "firebase/firestore";
 import { CheckCircle2, Loader2, Copy, AlertTriangle } from "lucide-react";
-import { db, OperationType, handleFirestoreError } from "../lib/firebase";
+import { db, OperationType, formatFirestoreError } from "../lib/firebase";
 import { AuthUser } from "../lib/auth";
 import { Picks, Pool } from "../types";
 import { TeamStandingInfo } from "../lib/nflApi";
@@ -34,6 +34,14 @@ const WIZARD_STEPS = [
   { id: 'submit', label: 'Review & Submit', category: 'submit' }
 ];
 
+// `deadline` is stored on the pool as a Firestore Timestamp, an ISO string, or a
+// Date depending on which write path set it, so normalize before comparing.
+function toDate(value: any): Date | null {
+  if (!value) return null;
+  const date = value?.toDate ? value.toDate() : new Date(value);
+  return isNaN(date.getTime()) ? null : date;
+}
+
 export default function PicksTab({ pool, user, userPicks, onPicksSaved, onNavigateToStandings, nflStandings }: PicksTabProps) {
   const [selections, setSelections] = useState<Record<string, string>>({});
   const [tiebreaker, setTiebreaker] = useState<string>("");
@@ -44,6 +52,36 @@ export default function PicksTab({ pool, user, userPicks, onPicksSaved, onNaviga
   const [lastAutosaveTime, setLastAutosaveTime] = useState<Date | null>(null);
   const autosaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isFirstLoad = useRef(true);
+
+  // Picks close at the pool deadline. A single timer fires at the deadline
+  // itself rather than ticking every second, so a member who had the tab open
+  // through the deadline gets locked out without re-rendering this component
+  // once a second for however long they sit here.
+  const deadline = toDate(pool.deadline);
+  const deadlineMs = deadline ? deadline.getTime() : null;
+  const [isLocked, setIsLocked] = useState(
+    () => deadlineMs !== null && Date.now() >= deadlineMs
+  );
+  useEffect(() => {
+    if (deadlineMs === null) {
+      setIsLocked(false);
+      return;
+    }
+    let timer: ReturnType<typeof setTimeout>;
+    const arm = () => {
+      const remaining = deadlineMs - Date.now();
+      if (remaining <= 0) {
+        setIsLocked(true);
+        return;
+      }
+      setIsLocked(false);
+      // setTimeout overflows past ~24.8 days and fires immediately, so for a
+      // deadline further out than that, sleep the maximum and re-arm.
+      timer = setTimeout(arm, Math.min(remaining, 2 ** 31 - 1));
+    };
+    arm();
+    return () => clearTimeout(timer);
+  }, [deadlineMs]);
   
   // Missing O/U reminder prompt modal states
   const [showOuWarningModal, setShowOuWarningModal] = useState(false);
@@ -120,6 +158,10 @@ export default function PicksTab({ pool, user, userPicks, onPicksSaved, onNaviga
   };
 
   const handleCopyPicks = (otherSelections: Record<string, string>, otherTiebreaker?: string) => {
+    if (isLocked) {
+      setShowCopyModal(false);
+      return;
+    }
     const newSelections = { ...selections };
     Object.entries(otherSelections).forEach(([key, val]) => {
       // For pools, we should just copy it if it's a valid key
@@ -234,6 +276,10 @@ export default function PicksTab({ pool, user, userPicks, onPicksSaved, onNaviga
     // Don't auto-save if everything is empty
     if (Object.keys(selections).length === 0 && !tiebreaker) return;
 
+    // Past the deadline the picks are final. Without this an edit made after
+    // kickoff would autosave silently, with the results already on screen.
+    if (isLocked) return;
+
     if (autosaveTimeoutRef.current) {
       clearTimeout(autosaveTimeoutRef.current);
     }
@@ -270,7 +316,13 @@ export default function PicksTab({ pool, user, userPicks, onPicksSaved, onNaviga
         setLastAutosaveTime(new Date());
         onPicksSaved(newPicks);
       } catch (err: any) {
-        console.error("Autosave error", err);
+        // Leave lastAutosaveTime alone — the saved indicator must not claim a
+        // write that didn't land. Silence here meant a user could fill out a
+        // full card on a bad connection and lose all of it believing it saved.
+        setMessage({
+          type: "error",
+          text: formatFirestoreError(err, OperationType.WRITE, path),
+        });
       } finally {
         setAutosaving(false);
       }
@@ -281,9 +333,13 @@ export default function PicksTab({ pool, user, userPicks, onPicksSaved, onNaviga
         clearTimeout(autosaveTimeoutRef.current);
       }
     };
-  }, [selections, tiebreaker]);
+    // isLocked is a dependency so that if the deadline passes while an edit is
+    // pending, the cleanup clears the queued write instead of letting a stale
+    // closure save after the lock.
+  }, [selections, tiebreaker, isLocked]);
 
   const handleSelectOption = (questionId: string, value: string) => {
+    if (isLocked) return;
     setSelections((prev) => ({
       ...prev,
       [questionId]: value,
@@ -296,6 +352,10 @@ export default function PicksTab({ pool, user, userPicks, onPicksSaved, onNaviga
   const totalQuestions = activeQuestionsList.length;
 
   const handleSave = async () => {
+    if (isLocked) {
+      setMessage({ type: "error", text: "Picks for this pool are closed." });
+      return;
+    }
     setSaving(true);
     setMessage(null);
     const path = `pools/${pool.id}/picks/${user.uid}`;
@@ -328,8 +388,7 @@ export default function PicksTab({ pool, user, userPicks, onPicksSaved, onNaviga
       setMessage({ type: "success", text: "Your picks have been saved successfully!" });
       onPicksSaved(newPicks);
     } catch (err: any) {
-      console.error(err);
-      setMessage({ type: "error", text: handleFirestoreError(err, OperationType.WRITE, path) });
+      setMessage({ type: "error", text: formatFirestoreError(err, OperationType.WRITE, path) });
     } finally {
       setSaving(false);
     }
@@ -349,6 +408,17 @@ export default function PicksTab({ pool, user, userPicks, onPicksSaved, onNaviga
 
   return (
     <div className="bg-[#09222c] border border-[#113a4b]/80 rounded-2xl p-4 sm:p-6 shadow-xl relative min-h-[600px] flex flex-col">
+      {isLocked && (
+        <div className="mb-4 flex items-start gap-2.5 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
+          <div className="text-xs leading-relaxed text-amber-200">
+            <span className="font-bold">Picks are locked.</span> The deadline for this
+            pool passed{deadline ? ` on ${deadline.toLocaleString()}` : ""}. Your
+            selections are final and can no longer be changed.
+          </div>
+        </div>
+      )}
+
       {/* Header with Copy Picks and User Profile Logo Info */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
         <div className="flex items-center gap-2.5">
@@ -381,15 +451,17 @@ export default function PicksTab({ pool, user, userPicks, onPicksSaved, onNaviga
           </button>
         </div>
 
-        <button
-          onClick={() => {
-            setShowCopyModal(true);
-            if (otherPoolPicks.length === 0) fetchOtherPicks();
-          }}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded-lg text-xs font-bold transition-colors cursor-pointer"
-        >
-          <Copy className="w-4 h-4" /> Copy from another pool
-        </button>
+        {!isLocked && (
+          <button
+            onClick={() => {
+              setShowCopyModal(true);
+              if (otherPoolPicks.length === 0) fetchOtherPicks();
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded-lg text-xs font-bold transition-colors cursor-pointer"
+          >
+            <Copy className="w-4 h-4" /> Copy from another pool
+          </button>
+        )}
       </div>
 
       {/* Copy Picks Modal */}
@@ -1021,7 +1093,8 @@ export default function PicksTab({ pool, user, userPicks, onPicksSaved, onNaviga
                      type="number"
                      min="0"
                      value={tiebreaker}
-                     onChange={(e) => { setTiebreaker(e.target.value); if (message?.type === "success") setMessage(null); }}
+                     disabled={isLocked}
+                     onChange={(e) => { if (isLocked) return; setTiebreaker(e.target.value); if (message?.type === "success") setMessage(null); }}
                      placeholder="e.g. 52"
                      className="w-full sm:w-1/2 bg-slate-900 border border-slate-700/80 rounded-lg px-4 py-3 text-white font-mono text-lg focus:outline-none focus:border-teal-500 transition-colors"
                    />
@@ -1048,14 +1121,14 @@ export default function PicksTab({ pool, user, userPicks, onPicksSaved, onNaviga
                ) : (
                  <button
                    onClick={handleSave}
-                   disabled={saving || answeredCount === 0 || !tiebreaker}
+                   disabled={isLocked || saving || answeredCount === 0 || !tiebreaker}
                    className="w-full flex items-center justify-center gap-2 py-4 bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-400 hover:to-cyan-400 text-slate-950 font-extrabold rounded-xl shadow-lg disabled:opacity-50 transition-all cursor-pointer text-lg"
                  >
                    <Save className="w-5 h-5" />
                    {saving ? "Saving picks..." : "Save My Picks"}
                  </button>
                )}
-               {(!tiebreaker) && (
+               {(!tiebreaker && !isLocked) && (
                  <p className="text-rose-400 text-xs text-center mt-3 font-semibold">Please enter a tiebreaker score to submit.</p>
                )}
             </div>
