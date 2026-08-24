@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { LogOut } from "lucide-react";
 import { useAuth } from "./lib/auth";
+import { trackScreenView } from "./lib/analytics";
 import { Pool } from "./types";
 import PoolSelector from "./components/PoolSelector";
 import PoolDetail from "./components/PoolDetail";
@@ -11,6 +12,16 @@ import Logo from "./components/Logo";
 export default function App() {
   const { user, loading, signOut } = useAuth();
   const [selectedPool, setSelectedPool] = useState<Pool | null>(null);
+
+  // There is no router here — screens are component state, so each one is
+  // reported to GA explicitly. The pool detail screen reports its own tabs.
+  const signedIn = !!user;
+  const inPoolDetail = !!selectedPool;
+  useEffect(() => {
+    if (loading || inPoolDetail) return;
+    if (signedIn) trackScreenView("/predictor/pools", "Predictor — Pools");
+    else trackScreenView("/predictor/login", "Predictor — Sign In");
+  }, [loading, signedIn, inPoolDetail]);
 
   const handleSignOut = async () => {
     await signOut();
