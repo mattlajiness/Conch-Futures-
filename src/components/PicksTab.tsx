@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { FUTURES_QUESTIONS, NFL_TEAMS_ALL, AFC_TEAMS, NFC_TEAMS, NFL_WIN_TOTALS } from "../constants";
 import { Save, Check, Award, Compass, ShieldAlert, Zap, ListOrdered, GripVertical, Trophy, ChevronRight, ChevronLeft, ChevronUp, ChevronDown, Sparkles } from "lucide-react";
 import { doc, setDoc, serverTimestamp, collectionGroup, query, where, getDocs, getDoc } from "firebase/firestore";
-import { CheckCircle2, Loader2, Copy } from "lucide-react";
+import { CheckCircle2, Loader2, Copy, AlertTriangle } from "lucide-react";
 import { db, OperationType, handleFirestoreError } from "../lib/firebase";
 import { AuthUser } from "../lib/auth";
 import { Picks, Pool } from "../types";
@@ -44,6 +44,31 @@ export default function PicksTab({ pool, user, userPicks, onPicksSaved, onNaviga
   const [lastAutosaveTime, setLastAutosaveTime] = useState<Date | null>(null);
   const autosaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isFirstLoad = useRef(true);
+  
+  // Missing O/U reminder prompt modal states
+  const [showOuWarningModal, setShowOuWarningModal] = useState(false);
+  const [pendingStepIndex, setPendingStepIndex] = useState<number | null>(null);
+  const [missingOuTeams, setMissingOuTeams] = useState<{ label: string; value: string }[]>([]);
+
+  const getMissingOuForStep = (step: typeof WIZARD_STEPS[0], sels = selections) => {
+    if (step.category !== "standings") return [];
+    const q = activeQuestionsList.find((item) => item.id === step.id);
+    if (!q) return [];
+    return q.options.filter((opt) => !sels[`ou_${opt.value.toLowerCase()}`]);
+  };
+
+  const handleStepNavigation = (targetIndex: number) => {
+    if (targetIndex > currentStepIndex && currentStep.category === "standings") {
+      const missing = getMissingOuForStep(currentStep);
+      if (missing.length > 0) {
+        setMissingOuTeams(missing);
+        setPendingStepIndex(targetIndex);
+        setShowOuWarningModal(true);
+        return;
+      }
+    }
+    setCurrentStepIndex(targetIndex);
+  };
   
   // Copy picks state
   const [showCopyModal, setShowCopyModal] = useState(false);
@@ -423,7 +448,7 @@ export default function PicksTab({ pool, user, userPicks, onPicksSaved, onNaviga
             return (
               <div 
                 key={step.id} 
-                onClick={() => setCurrentStepIndex(idx)}
+                onClick={() => handleStepNavigation(idx)}
                 className={`flex-shrink-0 flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] sm:text-xs font-bold uppercase tracking-wider cursor-pointer transition-all ${
                   isActive ? "bg-teal-500 text-slate-950 shadow-[0_0_15px_-3px_rgba(20,184,166,0.5)]" :
                   isComplete ? "bg-teal-500/20 text-teal-400 border border-teal-500/30" :
@@ -513,7 +538,11 @@ export default function PicksTab({ pool, user, userPicks, onPicksSaved, onNaviga
                               {isFilled && (
                                 <div className="flex items-center gap-2 sm:gap-3 shrink-0">
                                   <div
-                                    className="flex items-center gap-1.5 sm:gap-2 bg-slate-900/90 rounded-lg p-1 sm:p-1.5 border border-slate-700/60"
+                                    className={`flex items-center gap-1.5 sm:gap-2 rounded-lg p-1 sm:p-1.5 border transition-all ${
+    !selections[`ou_${teamVal.toLowerCase()}`]
+      ? "bg-amber-500/10 border-amber-500/40 shadow-sm"
+      : "bg-slate-900/90 border-slate-700/60"
+  }`}
                                     onPointerDown={(e) => e.stopPropagation()}
                                     onMouseDown={(e) => e.stopPropagation()}
                                     onTouchStart={(e) => e.stopPropagation()}
@@ -1055,13 +1084,86 @@ export default function PicksTab({ pool, user, userPicks, onPicksSaved, onNaviga
         
         {currentStepIndex < WIZARD_STEPS.length - 1 ? (
           <button
-            onClick={() => setCurrentStepIndex(prev => Math.min(WIZARD_STEPS.length - 1, prev + 1))}
+            onClick={() => handleStepNavigation(Math.min(WIZARD_STEPS.length - 1, currentStepIndex + 1))}
             className="flex items-center gap-2 px-6 py-2 bg-teal-600 hover:bg-teal-500 text-white rounded-lg font-bold transition-colors shadow-lg shadow-teal-500/20"
           >
             Next <ChevronRight className="w-5 h-5" />
           </button>
         ) : null}
       </div>
+
+      {/* O/U Incomplete Warning Prompt Modal */}
+      {showOuWarningModal && (
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+          <div className="bg-slate-900 border border-slate-700/90 rounded-2xl p-6 max-w-md w-full shadow-2xl text-center relative animate-in zoom-in-95 duration-200">
+            <div className="w-14 h-14 bg-amber-500/15 border border-amber-500/30 rounded-2xl flex items-center justify-center mx-auto mb-4 text-amber-400 shadow-inner">
+              <AlertTriangle className="w-7 h-7" />
+            </div>
+
+            <h3 className="text-lg sm:text-xl font-black text-white mb-2 leading-snug">
+              You haven't filled out O/U for each team yet
+            </h3>
+
+            <p className="text-slate-300 text-xs sm:text-sm leading-relaxed mb-4">
+              You have <strong className="text-amber-400 font-extrabold">{missingOuTeams.length}</strong> team{missingOuTeams.length > 1 ? "s" : ""} in the <span className="text-teal-400 font-bold">{currentStep.label}</span> without an <strong className="text-white">Over (O)</strong> or <strong className="text-white">Under (U)</strong> win total prediction.
+            </p>
+
+            {/* List missing teams */}
+            <div className="bg-slate-950/70 border border-slate-800 rounded-xl p-3 mb-6">
+              <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-2">
+                Unpicked Win Totals:
+              </div>
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                {missingOuTeams.map((team) => (
+                  <div
+                    key={team.value}
+                    className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-900 border border-amber-500/30 rounded-lg shadow-sm"
+                  >
+                    <img
+                      src={`https://a.espncdn.com/i/teamlogos/nfl/500/${team.value.toLowerCase()}.png`}
+                      alt={team.label}
+                      className="w-4 h-4 object-contain"
+                      referrerPolicy="no-referrer"
+                    />
+                    <span className="font-bold text-xs text-white">{team.value}</span>
+                    <span className="text-[10px] text-amber-300 font-mono font-bold">
+                      ({NFL_WIN_TOTALS[team.value] || 8.5})
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Action Buttons as requested: "Stay Here" and "Fill Them Out Later" */}
+            <div className="flex flex-col sm:flex-row items-center gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowOuWarningModal(false);
+                  setPendingStepIndex(null);
+                }}
+                className="w-full sm:flex-1 py-3 px-4 bg-teal-600 hover:bg-teal-500 text-white font-extrabold rounded-xl transition-all cursor-pointer shadow-lg shadow-teal-600/25 text-sm"
+              >
+                Stay Here
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowOuWarningModal(false);
+                  if (pendingStepIndex !== null) {
+                    setCurrentStepIndex(pendingStepIndex);
+                    setPendingStepIndex(null);
+                  }
+                }}
+                className="w-full sm:flex-1 py-3 px-4 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-bold rounded-xl border border-slate-700 transition-all cursor-pointer text-sm"
+              >
+                Fill Them Out Later
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Profile & Logo Customizer Modal */}
       <ProfileCustomizerModal

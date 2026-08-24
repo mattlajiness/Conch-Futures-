@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { collection, collectionGroup, query, where, getDocs, doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
-import { Trophy, Plus, LogIn, Lock, Users, ArrowRight, AlertCircle, Sparkles, Heart, Activity, UserPlus, CheckCircle2, Edit3, Shield } from "lucide-react";
+import { Trophy, Plus, LogIn, Lock, Users, ArrowRight, AlertCircle, Sparkles, Heart, Activity, UserPlus, CheckCircle2, Edit3, Shield, CircleDollarSign, Copy, Check } from "lucide-react";
 import { db, OperationType, handleFirestoreError } from "../lib/firebase";
 import { AuthUser } from "../lib/auth";
 import { FUTURES_QUESTIONS } from "../constants";
@@ -31,6 +31,32 @@ export default function PoolSelector({ user, onSelectPool }: PoolSelectorProps) 
   const [newDesc, setNewDesc] = useState("");
   const [newCode, setNewCode] = useState("");
   const [creating, setCreating] = useState(false);
+  const [newEntryFee, setNewEntryFee] = useState<string>("0");
+  const [newDuesNote, setNewDuesNote] = useState<string>("");
+  const [copiedNoteId, setCopiedNoteId] = useState<string | null>(null);
+  const [poolMemberCounts, setPoolMemberCounts] = useState<Record<string, number>>({});
+
+  const handleCopyNote = async (e: React.MouseEvent, poolId: string, text: string) => {
+    e.stopPropagation();
+    try {
+      if (navigator.clipboard) {
+        await navigator.clipboard.writeText(text);
+        setCopiedNoteId(poolId);
+        setTimeout(() => setCopiedNoteId(null), 2000);
+        return;
+      }
+    } catch (err) {
+      console.warn("Clipboard failed", err);
+    }
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    document.body.appendChild(textArea);
+    textArea.select();
+    document.execCommand("copy");
+    document.body.removeChild(textArea);
+    setCopiedNoteId(poolId);
+    setTimeout(() => setCopiedNoteId(null), 2000);
+  };
 
   // Activity Feed State
   const [activities, setActivities] = useState<ActivityItem[]>([]);
@@ -43,6 +69,7 @@ export default function PoolSelector({ user, onSelectPool }: PoolSelectorProps) 
       setLoadingActivities(true);
       try {
         const feed: ActivityItem[] = [];
+        const memberCountsMap: Record<string, number> = {};
 
         for (const pool of pools) {
           if (pool.createdAt) {
@@ -58,6 +85,7 @@ export default function PoolSelector({ user, onSelectPool }: PoolSelectorProps) 
 
           const picksQuery = query(collection(db, `pools/${pool.id}/picks`));
           const pickSnaps = await getDocs(picksQuery);
+          memberCountsMap[pool.id] = pickSnaps.size;
           pickSnaps.forEach(docSnap => {
             const data = docSnap.data();
             if (data.updatedAt) {
@@ -77,6 +105,7 @@ export default function PoolSelector({ user, onSelectPool }: PoolSelectorProps) 
 
         feed.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
         setActivities(feed.slice(0, 10));
+        setPoolMemberCounts(memberCountsMap);
       } catch (e) {
         console.error("Failed to load activities", e);
       } finally {
@@ -279,6 +308,7 @@ export default function PoolSelector({ user, onSelectPool }: PoolSelectorProps) 
     const generatedId = "pool_" + Math.random().toString(36).substr(2, 9);
     const poolPath = `pools/${generatedId}`;
 
+    const parsedFee = Math.max(0, Number(newEntryFee) || 0);
     const newPoolData = {
       id: generatedId,
       name: newName.trim(),
@@ -288,6 +318,9 @@ export default function PoolSelector({ user, onSelectPool }: PoolSelectorProps) 
       creatorName: user.displayName || "Unknown User",
       createdAt: serverTimestamp(),
       results: {},
+      entryFee: parsedFee,
+      duesNote: newDuesNote.trim(),
+      payments: {},
       activeQuestions: FUTURES_QUESTIONS.map((q) => q.id)
     };
 
@@ -455,6 +488,24 @@ export default function PoolSelector({ user, onSelectPool }: PoolSelectorProps) 
               <p className="text-xs text-slate-400">
                 Created by <span className="text-slate-300 font-semibold">{invitePool.creatorName}</span> • Passcode: <span className="font-mono text-emerald-400 font-bold">{invitePool.code}</span>
               </p>
+
+              {/* Payment & Pot Info on Invite Banner */}
+              <div className="inline-flex flex-wrap items-center gap-2 px-3 py-1.5 bg-slate-900/90 border border-emerald-500/30 rounded-xl text-xs max-w-full shadow-sm mt-1">
+                <CircleDollarSign className="w-3.5 h-3.5 text-emerald-400" />
+                {(invitePool.entryFee || 0) > 0 ? (
+                  <span className="font-mono text-emerald-300 font-bold">${invitePool.entryFee} Buy-In</span>
+                ) : (
+                  <span className="text-emerald-300 font-bold">Free Pool</span>
+                )}
+                {invitePool.duesNote && (
+                  <>
+                    <span className="text-slate-700">|</span>
+                    <span className="text-slate-300 text-xs font-medium truncate max-w-xs">
+                      Pay Info: {invitePool.duesNote}
+                    </span>
+                  </>
+                )}
+              </div>
             </div>
             <div className="flex items-center gap-3 w-full sm:w-auto">
               <button
@@ -559,7 +610,7 @@ export default function PoolSelector({ user, onSelectPool }: PoolSelectorProps) 
                             {pool.description}
                           </p>
                         )}
-                        <div className="flex items-center gap-3 mt-3">
+                        <div className="flex flex-wrap items-center gap-2 mt-2.5">
                           <span className="inline-flex items-center gap-1 text-[10px] uppercase font-mono tracking-wider px-2 py-0.5 rounded bg-[#041014] border border-[#113a4b]/40 text-teal-400">
                             Code: {pool.code}
                           </span>
@@ -570,6 +621,31 @@ export default function PoolSelector({ user, onSelectPool }: PoolSelectorProps) 
                           ) : (
                             <span className="text-[10px] text-slate-400">
                               By {pool.creatorName}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Picks Count & Paid Status */}
+                        <div 
+                          className="mt-3 p-2 bg-[#041014]/90 border border-[#113a4b]/50 rounded-xl text-xs flex flex-wrap items-center justify-between gap-2 group-hover:border-teal-500/40 transition-colors"
+                          onClick={(e) => {
+                            // Don't stop propagation so clicking the card opens the pool
+                          }}
+                        >
+                          <div className="flex items-center gap-1.5 text-slate-300 font-medium text-xs">
+                            <Users className="w-3.5 h-3.5 text-teal-400/70" />
+                            <span>
+                              {poolMemberCounts[pool.id] || 0} {poolMemberCounts[pool.id] === 1 ? "Pick" : "Picks"}
+                            </span>
+                          </div>
+
+                          {(pool.entryFee || 0) > 0 && (
+                            <span className={`text-[10px] px-2 py-0.5 rounded font-bold ${
+                              pool.payments?.[user.uid]?.paid
+                                ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                                : "bg-amber-500/20 text-amber-300 border border-amber-500/30"
+                            }`}>
+                              {pool.payments?.[user.uid]?.paid ? "Buy-In Paid ✅" : "Fee Pending 💸"}
                             </span>
                           )}
                         </div>
@@ -693,6 +769,33 @@ export default function PoolSelector({ user, onSelectPool }: PoolSelectorProps) 
                       maxLength={20}
                       className="w-full bg-[#041014] border border-[#113a4b]/60 rounded-xl px-4 py-2.5 text-white text-sm font-mono uppercase placeholder:text-slate-600 focus:outline-none focus:border-teal-500 transition-colors"
                     />
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                    <div>
+                      <label className="block text-xs font-semibold text-teal-400/80 uppercase tracking-wider mb-1.5">
+                        Entry Fee ($ USD) <span className="text-slate-500 font-normal">(Optional)</span>
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        placeholder="0"
+                        value={newEntryFee}
+                        onChange={(e) => setNewEntryFee(e.target.value)}
+                        className="w-full bg-[#041014] border border-[#113a4b]/60 rounded-xl px-4 py-2 text-white text-sm font-mono focus:outline-none focus:border-teal-500 transition-colors"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-teal-400/80 uppercase tracking-wider mb-1.5">
+                        Payment Handles <span className="text-slate-500 font-normal">(Optional)</span>
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Venmo: @commissioner"
+                        value={newDuesNote}
+                        onChange={(e) => setNewDuesNote(e.target.value)}
+                        className="w-full bg-[#041014] border border-[#113a4b]/60 rounded-xl px-4 py-2 text-white text-sm placeholder:text-slate-600 focus:outline-none focus:border-teal-500 transition-colors"
+                      />
+                    </div>
                   </div>
 
                   <button
