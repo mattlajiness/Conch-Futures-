@@ -594,15 +594,29 @@ export default function AdminTab({ pool, onPoolUpdated, categoryFilter = "all", 
       {activeTab === "dues" && (
         <div className="space-y-4">
           <div className="bg-gradient-to-r from-emerald-950/60 to-slate-900 border border-emerald-500/20 rounded-2xl p-3.5">
-            <h3 className="font-bold text-emerald-400 text-sm flex items-center gap-2">
-              <CircleDollarSign className="w-5 h-5 text-emerald-400" /> Manage Members & Pot Tracker
-            </h3>
-            <p className="text-slate-300 text-xs mt-1 leading-normal">
-              Set your pool's buy-in entry fee and payment note, then easily track who has paid. You can also click the shield icon next to a member's name in the checklist below to promote them to Co-Admin.
-            </p>
+            {(pool.entryFee || 0) > 0 ? (
+            <>
+              <h3 className="font-bold text-emerald-400 text-sm flex items-center gap-2">
+                <CircleDollarSign className="w-5 h-5 text-emerald-400" /> Manage Members & Pot Tracker
+              </h3>
+              <p className="text-slate-300 text-xs mt-1 leading-normal">
+                Set your pool's buy-in entry fee and payment note, then easily track who has paid. You can also click the shield icon next to a member's name in the checklist below to promote them to Co-Admin.
+              </p>
+            </>
+          ) : (
+            <>
+              <h3 className="font-bold text-emerald-400 text-sm flex items-center gap-2">
+                <Users className="w-5 h-5 text-emerald-400" /> Manage Members
+              </h3>
+              <p className="text-slate-300 text-xs mt-1 leading-normal">
+                View players in your pool. You can also click the shield icon next to a member's name in the checklist below to promote them to Co-Admin.
+              </p>
+            </>
+          )}
           </div>
 
           {/* Financial Summary Cards */}
+          {(pool.entryFee || 0) > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
             {/* Entry Fee */}
             <div className="bg-slate-800/80 border border-slate-700/60 rounded-xl p-3 flex items-center justify-between">
@@ -665,7 +679,7 @@ export default function AdminTab({ pool, onPoolUpdated, categoryFilter = "all", 
               </div>
             </div>
           </div>
-
+          )}
           {/* Dues Settings Card */}
           <div className="bg-slate-800 border border-slate-700/70 rounded-xl p-4 space-y-3">
             <h4 className="text-white text-xs font-extrabold uppercase tracking-wider flex items-center gap-2 border-b border-slate-700/60 pb-2">
@@ -724,14 +738,28 @@ export default function AdminTab({ pool, onPoolUpdated, categoryFilter = "all", 
           <div className="bg-slate-800/90 border border-slate-700/80 rounded-xl p-4 space-y-3">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-slate-700/70 pb-3">
               <div>
-                <h4 className="text-white text-sm font-extrabold flex items-center gap-2">
-                  <Receipt className="w-4 h-4 text-emerald-400" /> Member Dues Checklist
-                </h4>
-                <p className="text-slate-400 text-xs mt-0.5">
-                  Toggle paid status for each member. Click the shield icon next to a member's name to promote them to Co-Admin.
-                </p>
+                {(pool.entryFee || 0) > 0 ? (
+                  <>
+                    <h4 className="text-white text-sm font-extrabold flex items-center gap-2">
+                      <Receipt className="w-4 h-4 text-emerald-400" /> Member Dues Checklist
+                    </h4>
+                    <p className="text-slate-400 text-xs mt-0.5">
+                      Toggle paid status for each member. Click the shield icon next to a member's name to promote them to Co-Admin.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <h4 className="text-white text-sm font-extrabold flex items-center gap-2">
+                      <Users className="w-4 h-4 text-emerald-400" /> Members List
+                    </h4>
+                    <p className="text-slate-400 text-xs mt-0.5">
+                      Click the shield icon next to a member's name to promote them to Co-Admin.
+                    </p>
+                  </>
+                )}
               </div>
 
+              {(pool.entryFee || 0) > 0 && (
               <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                 <button
                   type="button"
@@ -757,6 +785,7 @@ export default function AdminTab({ pool, onPoolUpdated, categoryFilter = "all", 
                   {savingDuesStatus ? "Saving..." : "Save Payment Statuses"}
                 </button>
               </div>
+              )}
             </div>
 
             {/* Search and Filters */}
@@ -782,24 +811,28 @@ export default function AdminTab({ pool, onPoolUpdated, categoryFilter = "all", 
                 >
                   All ({members.length})
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setDuesFilter("paid")}
-                  className={`px-3 py-1 rounded text-xs font-bold transition-all cursor-pointer ${
-                    duesFilter === "paid" ? "bg-emerald-500 text-slate-950 shadow" : "text-slate-400 hover:text-white"
-                  }`}
-                >
-                  Paid ({paidMembersCount})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setDuesFilter("unpaid")}
-                  className={`px-3 py-1 rounded text-xs font-bold transition-all cursor-pointer ${
-                    duesFilter === "unpaid" ? "bg-emerald-500 text-slate-950 shadow" : "text-slate-400 hover:text-white"
-                  }`}
-                >
-                  Unpaid ({unpaidMembersCount})
-                </button>
+                {(pool.entryFee || 0) > 0 && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setDuesFilter("paid")}
+                      className={`px-3 py-1 rounded text-xs font-bold transition-all cursor-pointer ${
+                        duesFilter === "paid" ? "bg-emerald-500 text-slate-950 shadow" : "text-slate-400 hover:text-white"
+                      }`}
+                    >
+                      Paid ({paidMembersCount})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDuesFilter("unpaid")}
+                      className={`px-3 py-1 rounded text-xs font-bold transition-all cursor-pointer ${
+                        duesFilter === "unpaid" ? "bg-emerald-500 text-slate-950 shadow" : "text-slate-400 hover:text-white"
+                      }`}
+                    >
+                      Unpaid ({unpaidMembersCount})
+                    </button>
+                  </>
+                )}
               </div>
             </div>
 

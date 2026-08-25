@@ -328,28 +328,20 @@ export default function PoolDetail({ pool: initialPool, user, onBack }: PoolDeta
               <CountdownTimer targetDate={pool.deadline?.toDate ? pool.deadline.toDate() : (pool.deadline ? new Date(pool.deadline) : new Date("2026-09-10T20:20:00-04:00"))} />
             </div>
 
-            {/* Single Unified Payment, Total Pot & Instructions Bar (Always displayed) */}
-            <div className="mt-2 inline-flex flex-wrap items-center gap-2 sm:gap-2.5 px-3 py-1.5 bg-slate-900/90 hover:bg-slate-900 border border-emerald-500/30 hover:border-emerald-500/50 rounded-xl text-xs max-w-full shadow-sm transition-all">
-              {/* Money & Total Pot */}
-              <div 
-                onClick={() => setShowPaymentModal(true)}
-                className="flex items-center gap-1.5 text-emerald-400 font-bold shrink-0 cursor-pointer"
-                title="Click to view payment details"
-              >
-                <CircleDollarSign className="w-3.5 h-3.5 text-emerald-400" />
-                {(pool.entryFee || 0) > 0 ? (
+            {/* Single Unified Payment, Total Pot & Instructions Bar */}
+            {(pool.entryFee || 0) > 0 && (
+              <div className="mt-2 inline-flex flex-wrap items-center gap-2 sm:gap-2.5 px-3 py-1.5 bg-slate-900/90 hover:bg-slate-900 border border-emerald-500/30 hover:border-emerald-500/50 rounded-xl text-xs max-w-full shadow-sm transition-all">
+                {/* Money & Total Pot */}
+                <div 
+                  onClick={() => setShowPaymentModal(true)}
+                  className="flex items-center gap-1.5 text-emerald-400 font-bold shrink-0 cursor-pointer"
+                  title="Click to view payment details"
+                >
+                  <CircleDollarSign className="w-3.5 h-3.5 text-emerald-400" />
                   <span className="font-mono text-emerald-300 font-extrabold">${pool.entryFee} Buy-In</span>
-                ) : (
-                  <span className="text-emerald-300 font-bold">Free Pool</span>
-                )}
-
-                {(pool.entryFee || 0) > 0 && (
                   <span className="text-slate-400 font-normal">
                     • Pot: <strong className="text-white font-mono font-bold hover:text-emerald-300 underline decoration-emerald-500/50 underline-offset-2 transition-colors">${(pool.entryFee || 0) * Math.max(memberCount, 1)}</strong>
                   </span>
-                )}
-
-                {(pool.entryFee || 0) > 0 && (
                   <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold ml-0.5 ${
                     pool.payments?.[user.uid]?.paid
                       ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
@@ -357,70 +349,67 @@ export default function PoolDetail({ pool: initialPool, user, onBack }: PoolDeta
                   }`}>
                     {pool.payments?.[user.uid]?.paid ? "Buy-In Paid ✅" : "Fee Pending 💸"}
                   </span>
-                )}
-              </div>
-
-              {/* Payment Instructions / Handle Note (Only show if UNPAID) */}
-              {pool.duesNote && !pool.payments?.[user.uid]?.paid ? (
-                <>
-                  <span className="text-slate-700 hidden sm:inline">|</span>
-                  <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                    <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider shrink-0 hidden md:inline">
-                      Pay Info:
-                    </span>
-                    <span 
-                      onClick={() => setShowPaymentModal(true)}
-                      className="text-slate-200 truncate max-w-[180px] sm:max-w-xs md:max-w-sm lg:max-w-md font-medium text-xs cursor-pointer hover:text-white"
-                      title={pool.duesNote}
-                    >
-                      {pool.duesNote}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={handleCopyDuesNote}
-                      className="p-1 hover:bg-slate-800 text-slate-400 hover:text-emerald-300 rounded transition-colors cursor-pointer shrink-0"
-                      title="Copy payment instructions"
-                    >
-                      {duesNoteCopied ? (
-                        <Check className="w-3.5 h-3.5 text-emerald-400" />
-                      ) : (
-                        <Copy className="w-3.5 h-3.5" />
-                      )}
-                    </button>
-                  </div>
-                </>
-              ) : (
-                isCreator && !pool.duesNote && (
+                </div>
+                {/* Payment Instructions / Handle Note (Only show if UNPAID) */}
+                {pool.duesNote && !pool.payments?.[user.uid]?.paid ? (
                   <>
                     <span className="text-slate-700 hidden sm:inline">|</span>
-                    <button
-                      type="button"
-                      onClick={() => setShowPaymentModal(true)}
-                      className="text-[11px] text-emerald-400/90 hover:text-emerald-300 font-medium cursor-pointer"
-                    >
-                      + Add payment instructions
-                    </button>
-                  </>
-                )
-              )}
-
-              {/* Edit / Details Action */}
-              <button
-                type="button"
-                onClick={() => setShowPaymentModal(true)}
-                className="text-[11px] text-emerald-400 hover:text-emerald-300 font-bold ml-auto shrink-0 cursor-pointer hover:underline flex items-center gap-1"
-              >
-                {isCreator ? (
-                  <>
-                    <Edit3 className="w-3 h-3" />
-                    <span>{pool.duesNote || (pool.entryFee || 0) > 0 ? "Edit" : "+ Setup"}</span>
+                    <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                      <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider shrink-0 hidden md:inline">
+                        Pay Info:
+                      </span>
+                      <span 
+                        onClick={() => setShowPaymentModal(true)}
+                        className="text-slate-200 truncate max-w-[180px] sm:max-w-xs md:max-w-sm lg:max-w-md font-medium text-xs cursor-pointer hover:text-white"
+                        title={pool.duesNote}
+                      >
+                        {pool.duesNote}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleCopyDuesNote}
+                        className="p-1 hover:bg-slate-800 text-slate-400 hover:text-emerald-300 rounded transition-colors cursor-pointer shrink-0"
+                        title="Copy payment instructions"
+                      >
+                        {duesNoteCopied ? (
+                          <Check className="w-3.5 h-3.5 text-emerald-400" />
+                        ) : (
+                          <Copy className="w-3.5 h-3.5" />
+                        )}
+                      </button>
+                    </div>
                   </>
                 ) : (
-                  <span>Payouts & Details</span>
+                  isCreator && !pool.duesNote && (
+                    <>
+                      <span className="text-slate-700 hidden sm:inline">|</span>
+                      <button
+                        type="button"
+                        onClick={() => setShowPaymentModal(true)}
+                        className="text-[11px] text-emerald-400/90 hover:text-emerald-300 font-medium cursor-pointer"
+                      >
+                        + Add payment instructions
+                      </button>
+                    </>
+                  )
                 )}
-              </button>
-            </div>
-
+                {/* Edit / Details Action */}
+                <button
+                  type="button"
+                  onClick={() => setShowPaymentModal(true)}
+                  className="text-[11px] text-emerald-400 hover:text-emerald-300 font-bold ml-auto shrink-0 cursor-pointer hover:underline flex items-center gap-1"
+                >
+                  {isCreator ? (
+                    <>
+                      <Edit3 className="w-3 h-3" />
+                      Edit Fees
+                    </>
+                  ) : (
+                    "View Details →"
+                  )}
+                </button>
+              </div>
+            )}
             {pool.description && (
               <p className="text-slate-400 text-xs mt-1.5 max-w-xl line-clamp-1 leading-relaxed">
                 {pool.description}
@@ -655,7 +644,7 @@ export default function PoolDetail({ pool: initialPool, user, onBack }: PoolDeta
       </div>
     
       {/* Payment Info & Dues Modal (Accessible to all members) */}
-      <PaymentInfoModal
+      {showPaymentModal && <PaymentInfoModal
         isOpen={showPaymentModal}
         onClose={() => setShowPaymentModal(false)}
         pool={pool}
@@ -667,7 +656,7 @@ export default function PoolDetail({ pool: initialPool, user, onBack }: PoolDeta
           setActiveTab("admin");
           setAdminSubTab("dues");
         }}
-      />
+      />}
     </div>
   );
 }

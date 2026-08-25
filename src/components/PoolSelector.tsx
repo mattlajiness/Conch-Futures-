@@ -30,6 +30,7 @@ export default function PoolSelector({ user, onSelectPool }: PoolSelectorProps) 
   const [newName, setNewName] = useState("");
   const [newDesc, setNewDesc] = useState("");
   const [newCode, setNewCode] = useState("");
+  const [poolType, setPoolType] = useState<"free" | "paid">("free");
   const [creating, setCreating] = useState(false);
   const [newEntryFee, setNewEntryFee] = useState<string>("0");
   const [newDuesNote, setNewDuesNote] = useState<string>("");
@@ -343,7 +344,8 @@ export default function PoolSelector({ user, onSelectPool }: PoolSelectorProps) 
       return;
     }
 
-    const parsedFee = Math.max(0, Number(newEntryFee) || 0);
+    const parsedFee = poolType === "paid" ? Math.max(0, Number(newEntryFee) || 0) : 0;
+    const finalDuesNote = poolType === "paid" ? newDuesNote.trim() : "";
     const newPoolData = {
       id: generatedId,
       name: newName.trim(),
@@ -354,7 +356,7 @@ export default function PoolSelector({ user, onSelectPool }: PoolSelectorProps) 
       createdAt: serverTimestamp(),
       results: {},
       entryFee: parsedFee,
-      duesNote: newDuesNote.trim(),
+      duesNote: finalDuesNote,
       payments: {},
       activeQuestions: FUTURES_QUESTIONS.map((q) => q.id)
     };

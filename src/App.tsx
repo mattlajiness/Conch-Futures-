@@ -8,10 +8,12 @@ import PoolDetail from "./components/PoolDetail";
 import LoginPage from "./components/LoginPage";
 import HostBar from "./components/HostBar";
 import Logo from "./components/Logo";
+import SiteAdminPortal from "./components/SiteAdminPortal";
 
 export default function App() {
   const { user, loading, signOut } = useAuth();
   const [selectedPool, setSelectedPool] = useState<Pool | null>(null);
+  const [showSiteAdmin, setShowSiteAdmin] = useState(false);
 
   // There is no router here — screens are component state, so each one is
   // reported to GA explicitly. The pool detail screen reports its own tabs.
@@ -55,7 +57,7 @@ export default function App() {
       <header className="border-b border-[#113a4b]/50 bg-[#071d26]/80 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-2 sm:px-6 h-12 flex items-center justify-between">
           <div
-            onClick={() => setSelectedPool(null)}
+            onClick={() => { setSelectedPool(null); setShowSiteAdmin(false); }}
             className="flex items-center gap-2 cursor-pointer group"
           >
             <Logo size={40} variant="full" className="transition-transform group-hover:scale-105" />
@@ -65,6 +67,17 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3">
+            {user.email?.toLowerCase() === "mattlajiness@gmail.com" && (
+              <button
+                onClick={() => {
+                  setSelectedPool(null);
+                  setShowSiteAdmin(true);
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 hover:text-indigo-200 rounded-lg border border-indigo-500/30 transition-colors text-xs font-semibold cursor-pointer"
+              >
+                Site Admin
+              </button>
+            )}
             {/* Logout button */}
             <button
               onClick={handleSignOut}
@@ -80,7 +93,10 @@ export default function App() {
 
       {/* Main Workspace container */}
       <main className="flex-grow pb-4">
-        {selectedPool ? (
+        
+        {showSiteAdmin ? (
+          <SiteAdminPortal onBack={() => setShowSiteAdmin(false)} />
+        ) : selectedPool ? (
           <PoolDetail
             pool={selectedPool}
             user={user}
@@ -92,6 +108,7 @@ export default function App() {
             onSelectPool={(pool) => setSelectedPool(pool)}
           />
         )}
+  
       </main>
 
       {/* Footer */}
