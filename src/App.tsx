@@ -10,6 +10,8 @@ import HostBar from "./components/HostBar";
 import Logo from "./components/Logo";
 import SiteAdminPortal from "./components/SiteAdminPortal";
 
+const SITE_ADMIN_EMAILS = ["mattlajiness@gmail.com", "iam@tedmoke.com"];
+
 export default function App() {
   const { user, loading, signOut } = useAuth();
   const [selectedPool, setSelectedPool] = useState<Pool | null>(null);
@@ -67,7 +69,7 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3">
-            {user.email?.toLowerCase() === "mattlajiness@gmail.com" && (
+            {user.email && SITE_ADMIN_EMAILS.includes(user.email.toLowerCase()) && (
               <button
                 onClick={() => {
                   setSelectedPool(null);
