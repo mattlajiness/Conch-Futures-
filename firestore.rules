@@ -27,7 +27,8 @@ service cloud.firestore {
              && (!pool.keys().hasAny(['duesNote']) || (pool.duesNote is string && pool.duesNote.size() <= 1000))
              && (!pool.keys().hasAny(['payments']) || pool.payments is map)
              && (!pool.keys().hasAny(['coAdmins']) || pool.coAdmins is list)
-             && (!pool.keys().hasAny(['payouts']) || pool.payouts is list);
+             && (!pool.keys().hasAny(['payouts']) || pool.payouts is list)
+             && (!pool.keys().hasAny(['updatedAt']) || pool.updatedAt != null);
     }
     function isPoolCreator(pool) {
       return request.auth.uid == pool.creatorId;
@@ -61,7 +62,7 @@ service cloud.firestore {
                     && request.resource.data.creatorId == resource.data.creatorId
                     && request.resource.data.createdAt == resource.data.createdAt
                     && request.resource.data.diff(resource.data).affectedKeys()
-                         .hasOnly(['results', 'activeQuestions', 'name', 'description', 'code', 'tiebreakerResult', 'customPoints', 'deadline', 'entryFee', 'duesNote', 'payments', 'payouts', 'creatorName', 'coAdmins'])
+                         .hasOnly(['results', 'activeQuestions', 'name', 'description', 'code', 'tiebreakerResult', 'customPoints', 'deadline', 'entryFee', 'duesNote', 'payments', 'payouts', 'creatorName', 'coAdmins', 'updatedAt'])
                     // Only the creator decides who is an admin. Without this a co-admin
                     // could promote others, demote peers, or lock the creator out.
                     && (isPoolCreator(resource.data)
