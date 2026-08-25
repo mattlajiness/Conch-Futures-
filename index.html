@@ -33,21 +33,17 @@
       content="Build private pools with friends and pick division winners, awards, Super Bowl champions, and over/under win totals in the Conch Predictor Series."
     />
 
-    <!-- TODO: share image. Drop a 1200x630 PNG at public/social-image.png and
-         uncomment the block below. The URL must be absolute — Vite rewrites
+    <!-- Share image. The URL is absolute on purpose: Vite rewrites
          root-relative paths in this file to match VITE_BASE_PATH, but scrapers
-         never resolve a relative og:image, so it stays hardcoded.
-         Until it lands, link previews show title and description only. -->
-    <!--
-    <meta property="og:image" content="https://conchff.com/predictor/social-image.png" />
+         never resolve a relative og:image, so it stays hardcoded. -->
+    <meta property="og:image" content="https://conchff.com/predictor/social-image-predictor.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta property="og:image:type" content="image/png" />
     <meta property="og:image:alt" content="Conch Predictor Series" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:image" content="https://conchff.com/predictor/social-image.png" />
+    <meta name="twitter:image" content="https://conchff.com/predictor/social-image-predictor.png" />
     <meta name="twitter:image:alt" content="Conch Predictor Series" />
-    -->
 
     <!-- Google tag (gtag.js) — same property as the host app so /predictor/
          traffic shows up alongside it. Page views come from src/lib/analytics.ts;
